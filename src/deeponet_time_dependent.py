@@ -3,9 +3,11 @@ import torch
 from torch.utils.data import DataLoader, TensorDataset
 import matplotlib.pyplot as plt
 
-from datagen import generate_decaying_sines, generate_oscillating_sines, surface_plot, heatmap_plot, plot_functions_only
+# from datagen import generate_decaying_sines, surface_plot
+from datagen import generate_oscillating_sines, heatmap_plot, plot_functions_only
 from deeponet_training import train_deeponet, plot_losses, load_deeponet, test_deeponet
 from utils import save_model
+
 
 def subsampling_grid(len_sensor_points, len_timesteps, fraction=1, visualize=True):
     """
@@ -31,14 +33,15 @@ def subsampling_grid(len_sensor_points, len_timesteps, fraction=1, visualize=Tru
         # Otherwise, we need to sample from {0, 1} with the given probability
         grid = np.random.choice([0, 1], size=(len_sensor_points, len_timesteps), p=[1 - probability_of_one, probability_of_one])
 
-    #Visualize the grid
+    # Visualize the grid
     if visualize:
         frac = np.sum(grid) / (len_sensor_points * len_timesteps)
         plt.imshow(grid)
         plt.title(f"Subsampling grid with fraction = {frac:.3f}")
         plt.show()
-        
+
     return grid
+
 
 def create_dataloader_2D(functions, sensor_points, timesteps, subsampling_grid=[], batch_size=32, shuffle=False):
     """
@@ -79,6 +82,7 @@ def create_dataloader_2D(functions, sensor_points, timesteps, subsampling_grid=[
     # Create a TensorDataset and DataLoader
     dataset = TensorDataset(branch_inputs_tensor, trunk_inputs_tensor, targets_tensor)
     return DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
+
 
 def create_dataloader_2D_frac(functions, sensor_points, timesteps, fraction=1, batch_size=32, shuffle=False):
     """
@@ -125,7 +129,8 @@ def create_dataloader_2D_frac(functions, sensor_points, timesteps, fraction=1, b
     dataset = TensorDataset(branch_inputs_tensor, trunk_inputs_tensor, targets_tensor)
     return DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
 
-if __name__=="__main__":
+
+if __name__ == "__main__":
     TRAIN = False
     branch_input_size = 41
     trunk_input_size = 2
@@ -141,33 +146,33 @@ if __name__=="__main__":
     num_samples_test = 100
 
     sensor_locations = np.linspace(0, 1, branch_input_size)
-    #surface_plot(sensor_locations, timesteps, polynomials, num_samples_to_plot=3)
+    # surface_plot(sensor_locations, timesteps, polynomials, num_samples_to_plot=3)
     # train_data, amplitudes, frequencies, timesteps = generate_decaying_sines(
-    #     sensor_locations=sensor_locations, 
-    #     decay_rate=decay_rate, 
-    #     num_samples=num_samples_train, 
+    #     sensor_locations=sensor_locations,
+    #     decay_rate=decay_rate,
+    #     num_samples=num_samples_train,
     #     N_steps=N_timesteps)
     # test_data, _, _, _ = generate_decaying_sines(
-    #     sensor_locations=sensor_locations, 
-    #     decay_rate=decay_rate, 
-    #     num_samples=num_samples_test, 
+    #     sensor_locations=sensor_locations,
+    #     decay_rate=decay_rate,
+    #     num_samples=num_samples_test,
     #     N_steps=N_timesteps)
     train_data, amplitudes, frequencies, timesteps = generate_oscillating_sines(
-        sensor_locations=sensor_locations, 
-        rate=decay_rate, 
-        num_samples=num_samples_train, 
+        sensor_locations=sensor_locations,
+        rate=decay_rate,
+        num_samples=num_samples_train,
         N_steps=N_timesteps)
     test_data, _, _, _ = generate_oscillating_sines(
-        sensor_locations=sensor_locations, 
-        rate=decay_rate, 
-        num_samples=num_samples_test, 
+        sensor_locations=sensor_locations,
+        rate=decay_rate,
+        num_samples=num_samples_test,
         N_steps=N_timesteps)
-    #surface_plot(sensor_locations, timesteps, sines, num_samples_to_plot=3, title="Decaying sines")
+    # surface_plot(sensor_locations, timesteps, sines, num_samples_to_plot=3, title="Decaying sines")
     heatmap_plot(sensor_locations, timesteps, train_data, num_samples_to_plot=3, title="Decaying sines")
     print("Data generated.")
-    plot_functions_only(train_data[:,:,0], sensor_locations, 100)
+    plot_functions_only(train_data[:, :, 0], sensor_locations, 100)
 
-    #grid = subsampling_grid(len(sensor_locations), len(timesteps), fraction=fraction, visualize=True)
+    # grid = subsampling_grid(len(sensor_locations), len(timesteps), fraction=fraction, visualize=True)
 
     # Create a DataLoader for DeepONet
     dataloader = create_dataloader_2D_frac(train_data, sensor_locations, timesteps, batch_size=32, shuffle=True, fraction=fraction)
@@ -178,17 +183,17 @@ if __name__=="__main__":
     if TRAIN:
         # Train the DeepONet
         vanilla_deeponet, loss, test_loss = train_deeponet(
-            dataloader, 
-            branch_input_size, 
-            trunk_input_size, 
-            hidden_size, 
-            branch_hidden_layers, 
-            trunk_hidden_layers, 
-            num_epochs, 
-            learning_rate, 
+            dataloader,
+            branch_input_size,
+            trunk_input_size,
+            hidden_size,
+            branch_hidden_layers,
+            trunk_hidden_layers,
+            num_epochs,
+            learning_rate,
             test_loader=dataloader_test)
         # Plot the loss
-        plot_losses((loss, np.repeat(test_loss,10)), ('train loss', 'test loss'))
+        plot_losses((loss, np.repeat(test_loss, 10)), ('train loss', 'test loss'))
         # Save the trained DeepONet
         save_model(vanilla_deeponet, "deeponet_time_dependent", {
             "branch_input_size": branch_input_size,
@@ -207,23 +212,21 @@ if __name__=="__main__":
     else:
         # Load the DeepONet
         vanilla_deeponet = load_deeponet(
-            "models/31-01/deeponet_time_dependent.pth", 
-            branch_input_size, 
-            trunk_input_size, 
-            hidden_size, 
-            branch_hidden_layers, 
+            "models/31-01/deeponet_time_dependent.pth",
+            branch_input_size,
+            trunk_input_size,
+            hidden_size,
+            branch_hidden_layers,
             trunk_hidden_layers)
 
-    #Test the DeepONet
+    # Test the DeepONet
     total_loss, predictions = test_deeponet(vanilla_deeponet, dataloader_test)
     print(f"Total loss: {total_loss:.3E}")
 
     # Plot the results
     predictions = predictions.reshape(-1, len(sensor_locations), len(timesteps))
 
-    #surface_plot(sensor_locations, timesteps, sines, 3, predictions, title="DeepONet results")
+    # surface_plot(sensor_locations, timesteps, sines, 3, predictions, title="DeepONet results")
     heatmap_plot(sensor_locations, timesteps, test_data, 5, predictions, title="DeepONet results")
 
     print("Done.")
-
-    

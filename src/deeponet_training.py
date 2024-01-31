@@ -1,10 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-import torch   
+import torch
 import torch.nn as nn
 import torch.optim as optim
-import torch.optim.lr_scheduler as lr_scheduler
 from torch.utils.data import DataLoader, TensorDataset
 
 from tqdm import tqdm
@@ -13,9 +12,10 @@ from itertools import cycle
 from datagen import generate_polynomial_data, generate_GRF_data, generate_sine_data
 from deeponet import DeepONet
 
+
 def train_deeponet(data_loader, branch_input_size, trunk_input_size, hidden_size, branch_hidden_layers=3, trunk_hidden_layers=1, num_epochs=1000, learning_rate=0.001, schedule=True, test_loader=None):
     '''Train a DeepONet model.
-    The function instantiates a DeepONet model and trains it using the provided DataLoader. 
+    The function instantiates a DeepONet model and trains it using the provided DataLoader.
     Note that it assumes equal number of neurons in each hidden layer of the branch and trunk networks.
 
     :param data_loader: A DataLoader object.
@@ -36,7 +36,7 @@ def train_deeponet(data_loader, branch_input_size, trunk_input_size, hidden_size
         scheduler = optim.lr_scheduler.LinearLR(optimizer, start_factor=1, end_factor=0.1, total_iters=num_epochs)
 
     train_loss_history = np.zeros(num_epochs)
-    test_loss_history = np.zeros(num_epochs//10)
+    test_loss_history = np.zeros(num_epochs // 10)
 
     total_predictions = sum(len(targets) for _, _, targets in data_loader)
 
@@ -53,17 +53,18 @@ def train_deeponet(data_loader, branch_input_size, trunk_input_size, hidden_size
         epoch_loss /= total_predictions
         train_loss_history[epoch] = epoch_loss
         clr = optimizer.param_groups[0]["lr"]
-        progress_bar.set_postfix({'loss': epoch_loss, 'lr': clr})   
+        progress_bar.set_postfix({'loss': epoch_loss, 'lr': clr})
         scheduler.step()
         if test_loader is not None:
-            if epoch%10==0:
+            if epoch % 10 == 0:
                 test_loss, _ = test_deeponet(deeponet, test_loader)
-                test_loss_history[int(epoch/10)] = test_loss
+                test_loss_history[int(epoch / 10)] = test_loss
 
     if test_loader is not None:
         return deeponet, train_loss_history, test_loss_history
     else:
         return deeponet, train_loss_history
+
 
 def test_deeponet(model, data_loader):
     """
@@ -76,7 +77,7 @@ def test_deeponet(model, data_loader):
     """
     criterion = nn.MSELoss(reduction='sum')
     model.eval()
-    
+
     # Calculate the total number of predictions to pre-allocate the buffer
     total_predictions = sum(len(targets) for _, _, targets in data_loader)
     predictions_buffer = np.empty(total_predictions)
@@ -94,10 +95,11 @@ def test_deeponet(model, data_loader):
             predictions_buffer[buffer_index:buffer_index + num_predictions] = outputs.cpu().numpy()
             buffer_index += num_predictions
 
-    #Calculate relative error
+    # Calculate relative error
     total_loss /= total_predictions
 
     return total_loss, predictions_buffer
+
 
 def create_dataloader(data, sensor_points, batch_size=32, shuffle=False):
     """
@@ -127,6 +129,7 @@ def create_dataloader(data, sensor_points, batch_size=32, shuffle=False):
     dataset = TensorDataset(branch_inputs_tensor, trunk_inputs_tensor, targets_tensor)
     return DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
 
+
 def plot_losses(loss_histories, labels):
     """
     Plot the loss trajectories for the training of multiple models.
@@ -136,7 +139,7 @@ def plot_losses(loss_histories, labels):
     """
 
     plt.figure(figsize=(12, 6))
-    if len(loss_histories)!=len(labels):
+    if len(loss_histories) != len(labels):
         plt.plot(loss_histories, label=labels)
     else:
         for loss, label in zip(loss_histories, labels):
@@ -148,6 +151,7 @@ def plot_losses(loss_histories, labels):
     plt.legend()
     plt.show()
 
+
 def plot_results(title, sensor_locations, function_values, ground_truth, y_values, predictions, num_samples=3):
     colors = cycle(plt.cm.tab10.colors)  # Color cycle from a matplotlib colormap
 
@@ -158,7 +162,7 @@ def plot_results(title, sensor_locations, function_values, ground_truth, y_value
     plt.subplot(1, 2, 1)
     for i in range(num_samples):
         color = next(colors)
-        #plt.plot(sensor_locations, function_values[i], label=f"Input Function {i+1}", color=color, linestyle='-', marker='o')
+        # plt.plot(sensor_locations, function_values[i], label=f"Input Function {i+1}", color=color, linestyle='-', marker='o')
         plt.plot(sensor_locations, ground_truth[i], label=f"Ground Truth {i+1}", color=color, linestyle='--')
         plt.plot(y_values, predictions[i], label=f"DeepONet Prediction {i+1}", color=color, linestyle=':', marker='.')
     plt.xlabel("Domain")
@@ -180,6 +184,7 @@ def plot_results(title, sensor_locations, function_values, ground_truth, y_value
     plt.tight_layout()
     plt.show()
 
+
 def load_deeponet(path_to_state_dict, branch_input_size, trunk_input_size, hidden_size, branch_hidden_layers, trunk_hidden_layers):
     """
     Load a DeepONet model from a saved state dictionary.
@@ -192,8 +197,8 @@ def load_deeponet(path_to_state_dict, branch_input_size, trunk_input_size, hidde
     :return: Loaded DeepONet model.
     """
     # Recreate the model architecture
-    #branch_net = BranchNet(branch_input_size, hidden_size, hidden_size, branch_hidden_layers)
-    #trunk_net = TrunkNet(trunk_input_size, hidden_size, hidden_size, trunk_hidden_layers)
+    # branch_net = BranchNet(branch_input_size, hidden_size, hidden_size, branch_hidden_layers)
+    # trunk_net = TrunkNet(trunk_input_size, hidden_size, hidden_size, trunk_hidden_layers)
     deeponet = DeepONet(branch_input_size, hidden_size, branch_hidden_layers, trunk_input_size, hidden_size, trunk_hidden_layers, hidden_size)
 
     # Load the state dictionary
@@ -201,14 +206,15 @@ def load_deeponet(path_to_state_dict, branch_input_size, trunk_input_size, hidde
     deeponet.load_state_dict(state_dict)
 
     return deeponet
-    
+
+
 if __name__ == "__main__":
 
-    #Hyperparameters
+    # Hyperparameters
     TRAIN = False
     branch_input_size = 21
     trunk_input_size = 1
-    hidden_size = 40    
+    hidden_size = 40
     branch_output_size = hidden_size
     trunk_output_size = hidden_size
     branch_hidden_layers = 3
@@ -231,17 +237,17 @@ if __name__ == "__main__":
         torch.save(poly_deeponet.state_dict(), "poly_deeponet.pt")
         torch.save(grf_deeponet.state_dict(), "grf_deeponet.pt")
 
-        #Plot the loss trajectories
+        # Plot the loss trajectories
         plot_losses([poly_loss, grf_loss], ['Polynomial Data', 'GRF Data'])
     else:
         poly_deeponet = load_deeponet("poly_deeponet.pt", branch_input_size, trunk_input_size, hidden_size, branch_hidden_layers, trunk_hidden_layers)
         grf_deeponet = load_deeponet("grf_deeponet.pt", branch_input_size, trunk_input_size, hidden_size, branch_hidden_layers, trunk_hidden_layers)
 
-    #Generate sine data for testing
+    # Generate sine data for testing
     sine_data = generate_sine_data(1000, sensor_points)
     sine_data_loader = create_dataloader(sine_data, sensor_points)
 
-    #Generate some more polynomial data and GRF data for testing
+    # Generate some more polynomial data and GRF data for testing
     poly_test_data = generate_polynomial_data(dataset_size, sensor_points, scale=3)
     grf_test_data = generate_GRF_data(dataset_size, sensor_points, length_scale=0.3)
     poly_test_data_loader = create_dataloader(poly_test_data, sensor_points)
@@ -253,9 +259,9 @@ if __name__ == "__main__":
     print(f"Polynomial Model Test Loss: {poly_test_loss}")
     print(f"GRF Model Test Loss: {grf_test_loss}")
 
-    #Plot some examples from the test set
+    # Plot some examples from the test set
     poly_predictions = poly_predictions.reshape(-1, len(sensor_points))
     grf_predictions = grf_predictions.reshape(-1, len(sensor_points))
     sine_data = np.array(sine_data)
-    plot_results('Polynomial data', sensor_points, sine_data[:,0], sine_data[:,1], sensor_points, poly_predictions, num_samples_to_plot)
-    plot_results('GRF data', sensor_points, sine_data[:,0], sine_data[:,1], sensor_points, grf_predictions, num_samples_to_plot)
+    plot_results('Polynomial data', sensor_points, sine_data[:, 0], sine_data[:, 1], sensor_points, poly_predictions, num_samples_to_plot)
+    plot_results('GRF data', sensor_points, sine_data[:, 0], sine_data[:, 1], sensor_points, grf_predictions, num_samples_to_plot)

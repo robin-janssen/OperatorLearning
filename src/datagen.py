@@ -3,11 +3,13 @@ import matplotlib.pyplot as plt
 from itertools import cycle
 from scipy.integrate import simps
 
+
 def rbf_kernel(sensor_points, length_scale):
     """ Radial Basis Function (RBF) kernel (Gaussian kernel). """
     sensor_points = sensor_points[:, np.newaxis]
     sqdist = np.sum(sensor_points**2, 1).reshape(-1, 1) + np.sum(sensor_points**2, 1) - 2 * np.dot(sensor_points, sensor_points.T)
-    return np.exp(-0.5 * (1/length_scale**2) * sqdist)
+    return np.exp(-0.5 * (1 / length_scale**2) * sqdist)
+
 
 def numerical_integration(y_values, x_values, method='trapezoidal'):
     """
@@ -22,7 +24,7 @@ def numerical_integration(y_values, x_values, method='trapezoidal'):
 
     if method == 'trapezoidal':
         for i in range(1, len(x_values)):
-            antiderivative[i] = antiderivative[i-1] + np.trapz(y_values[i-1:i+1], x_values[i-1:i+1])
+            antiderivative[i] = antiderivative[i - 1] + np.trapz(y_values[i - 1:i + 1], x_values[i - 1:i + 1])
     elif method == 'cumsum':
         dx = x_values[1] - x_values[0]
         antiderivative = np.cumsum(y_values) * dx
@@ -30,13 +32,14 @@ def numerical_integration(y_values, x_values, method='trapezoidal'):
         if len(x_values) % 2 == 0:
             raise ValueError("Simpson's rule requires an odd number of points.")
         for i in range(1, len(x_values), 2):
-            antiderivative[i] = simps(y_values[:i+1], x_values[:i+1])
-            if i+1 < len(x_values):
-                antiderivative[i+1] = antiderivative[i]
+            antiderivative[i] = simps(y_values[:i + 1], x_values[:i + 1])
+            if i + 1 < len(x_values):
+                antiderivative[i + 1] = antiderivative[i]
     else:
         raise ValueError("Invalid integration method. Choose 'trapezoidal', 'cumsum', or 'simpson'.")
 
     return antiderivative
+
 
 def trapezoidal_rule(y_values, x_values):
     """
@@ -49,6 +52,7 @@ def trapezoidal_rule(y_values, x_values):
     integral = np.trapz(y_values, x_values)
     return integral
 
+
 def generate_polynomial_data(num_samples, sensor_points, scale=1, method='trapezoidal'):
     data = []
     for _ in range(num_samples):
@@ -58,23 +62,24 @@ def generate_polynomial_data(num_samples, sensor_points, scale=1, method='trapez
         poly = polynomial(sensor_points)
 
         # Compute antiderivative
-        #antiderivative = polynomial.integ()
+        # antiderivative = polynomial.integ()
         antiderivative = numerical_integration(poly, sensor_points, method=method)
 
         data.append((poly, antiderivative))
 
     return data
 
+
 def generate_sine_data(num_samples, sensor_points, int_method='trapezoidal'):
     data = []
     for _ in range(num_samples):
         # Generate two sine waves with random frequency and phase
         frequency1 = np.random.uniform(0.1, 5)
-        phase1 = np.random.uniform(0, 2*np.pi)
+        phase1 = np.random.uniform(0, 2 * np.pi)
         sine_wave1 = np.sin(2 * np.pi * frequency1 * sensor_points + phase1)
 
         frequency2 = np.random.uniform(1, 5)
-        phase2 = np.random.uniform(0, 2*np.pi)
+        phase2 = np.random.uniform(0, 2 * np.pi)
         sine_wave2 = np.sin(2 * np.pi * frequency2 * sensor_points + phase2)
 
         # Add the two sine waves together
@@ -86,6 +91,7 @@ def generate_sine_data(num_samples, sensor_points, int_method='trapezoidal'):
         data.append((sine_wave, antiderivative))
 
     return data
+
 
 def generate_GRF_data(num_samples, sensor_points, length_scale, int_method='trapezoidal'):
     data = []
@@ -103,10 +109,11 @@ def generate_GRF_data(num_samples, sensor_points, length_scale, int_method='trap
 
     return data
 
+
 def plot_functions_and_antiderivatives(data_poly, data_GRF, data_sine, sensor_points, num_samples_to_plot=3):
     fig, axs = plt.subplots(1, 3, figsize=(12, 4))
     fig.suptitle('Some samples of the data')
-    
+
     colors = cycle(plt.cm.tab10.colors)  # Color cycle from a matplotlib colormap
 
     for i in range(num_samples_to_plot):
@@ -129,14 +136,15 @@ def plot_functions_and_antiderivatives(data_poly, data_GRF, data_sine, sensor_po
     plt.tight_layout()
     plt.show()
 
+
 def plot_functions_only(data, sensor_points, num_samples_to_plot):
     '''
     Plot some samples of the data
-    
+
     :param data: numpy array of data
     :param sensor_points: Array of sensor locations in the domain.
     :param num_samples_to_plot: Number of samples to plot.
-    
+
     '''
     plt.figure(figsize=(6, 4))
     plt.title('Function Coverage')
@@ -149,11 +157,12 @@ def plot_functions_only(data, sensor_points, num_samples_to_plot):
     plt.tight_layout()
     plt.show()
 
+
 def generate_decaying_polynomials(num_samples=100, order=5, sensor_locations=[], N_steps=101, T_final=1, decay_rate=1, scale=1):
     # Time steps
     timesteps = np.linspace(0, T_final, N_steps)
 
-    #Sensor locations
+    # Sensor locations
     if len(sensor_locations) == 0:
         sensor_locations = np.linspace(0, 1, 101)
 
@@ -177,11 +186,12 @@ def generate_decaying_polynomials(num_samples=100, order=5, sensor_locations=[],
 
     return polynomials, coefficients, timesteps
 
+
 def generate_decaying_sines(num_samples=100, N_sines=3, sensor_locations=[], N_steps=101, T_final=1, decay_rate=1, scale=1):
     # Time steps
     timesteps = np.linspace(0, T_final, N_steps)
 
-    #Sensor locations
+    # Sensor locations
     if len(sensor_locations) == 0:
         sensor_locations = np.linspace(0, 1, 101)
 
@@ -206,12 +216,13 @@ def generate_decaying_sines(num_samples=100, N_sines=3, sensor_locations=[], N_s
             sines[i, :, j] = sine_sum
 
     return sines, amplitudes, frequencies, timesteps
+
 
 def generate_random_decaying_sines(num_samples=100, N_sines=3, sensor_locations=[], N_steps=101, T_final=1, decay_rate=1, scale=1):
     # Time steps
     timesteps = np.linspace(0, T_final, N_steps)
 
-    #Sensor locations
+    # Sensor locations
     if len(sensor_locations) == 0:
         sensor_locations = np.linspace(0, 1, 101)
 
@@ -237,11 +248,12 @@ def generate_random_decaying_sines(num_samples=100, N_sines=3, sensor_locations=
 
     return sines, amplitudes, frequencies, timesteps
 
+
 def generate_oscillating_sines(num_samples=100, N_sines=3, sensor_locations=[], N_steps=101, T_final=1, rate=1, scale=1):
     # Time steps
     timesteps = np.linspace(0, T_final, N_steps)
 
-    #Sensor locations
+    # Sensor locations
     if len(sensor_locations) == 0:
         sensor_locations = np.linspace(0, 1, 101)
 
@@ -266,6 +278,7 @@ def generate_oscillating_sines(num_samples=100, N_sines=3, sensor_locations=[], 
             sines[i, :, j] = sine_sum
 
     return sines, amplitudes, frequencies, timesteps
+
 
 def surface_plot(sensor_locations, timesteps, functions, num_samples_to_plot, predictions=None, title='Data Visualization'):
     """
@@ -303,10 +316,11 @@ def surface_plot(sensor_locations, timesteps, functions, num_samples_to_plot, pr
             # Plot error
             Z_err = Z_gt - Z_pred
             plot_single_surface(fig, 3, i, 3, total_cols, X, Y, Z_err, 'Error', i)
-    
+
     plt.gcf().subplots_adjust(bottom=0.3)
     plt.tight_layout()
     plt.show()
+
 
 def plot_single_surface(fig, row, col, total_rows, total_cols, X, Y, Z, title_prefix, sample_number):
     """
@@ -336,6 +350,7 @@ def plot_single_surface(fig, row, col, total_rows, total_cols, X, Y, Z, title_pr
     ax.set_ylabel('Time')
     ax.set_zlabel('Value')
     ax.set_title(f'{title_prefix} Sample {sample_number + 1}')
+
 
 def heatmap_plot(sensor_locations, timesteps, functions, num_samples_to_plot, predictions=None, title='Data Visualization'):
     """
@@ -380,32 +395,32 @@ def heatmap_plot(sensor_locations, timesteps, functions, num_samples_to_plot, pr
             axs[2, i].set_ylabel('Time')
 
     # Add a common colorbar
-    #cbar = fig.colorbar(im, ax=axs.ravel().tolist(), orientation='vertical')
-    #cbar.set_label('Value')
+    # cbar = fig.colorbar(im, ax=axs.ravel().tolist(), orientation='vertical')
+    # cbar.set_label('Value')
     cbar_ax = fig.add_axes([0.92, 0.15, 0.02, 0.7])  # [left, bottom, width, height]
-    cbar = fig.colorbar(im, cax=cbar_ax)
-    #fig.subplots_adjust(right=2)  # Adjust as needed
+    fig.colorbar(im, cax=cbar_ax)
+    # fig.subplots_adjust(right=2)  # Adjust as needed
 
-    #plt.tight_layout()
+    # plt.tight_layout()
     plt.show()
+
 
 if __name__ == "__main__":
     num_samples = 1000
     sensor_points = np.linspace(0, 1, 100)
     length_scale = 0.1
     scale = 3
-    method = 'trapezoidal' #choose from trapezoidal, cumsum, or simpson
+    method = 'trapezoidal'  # choose from trapezoidal, cumsum, or simpson
 
     data_poly = generate_polynomial_data(num_samples, sensor_points, scale, method)
     data_GRF = generate_GRF_data(num_samples, sensor_points, length_scale, method)
     data_sine = generate_sine_data(num_samples, sensor_points, method)
     # data = generate_polynomial_data(num_samples, sensor_points)
 
-    #Inspect how the data covers the domain
+    # Inspect how the data covers the domain
     plot_functions_only(data_poly, sensor_points, num_samples_to_plot=100)
     plot_functions_only(data_GRF, sensor_points, num_samples_to_plot=100)
     plot_functions_only(data_sine, sensor_points, num_samples_to_plot=100)
-    
-    #Plot some examples from the data
-    plot_functions_and_antiderivatives(data_poly, data_GRF, data_sine, sensor_points, num_samples_to_plot=3)
 
+    # Plot some examples from the data
+    plot_functions_and_antiderivatives(data_poly, data_GRF, data_sine, sensor_points, num_samples_to_plot=3)

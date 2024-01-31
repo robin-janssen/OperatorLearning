@@ -3,6 +3,7 @@ import torch
 import yaml
 from datetime import datetime
 
+
 def save_model(model, model_name, hyperparameters, base_dir="models"):
     """
     Save the trained model and hyperparameters.
@@ -24,8 +25,7 @@ def save_model(model, model_name, hyperparameters, base_dir="models"):
 
     # Save hyperparameters as a YAML file
     hyperparameters_path = os.path.join(model_dir, "hyperparameters.yaml")
-    with open(hyperparameters_path, 'w') as file:
+    with open(hyperparameters_path, "w") as file:
         yaml.dump(hyperparameters, file)
 
     print(f"Model and hyperparameters saved to {model_dir}")
-

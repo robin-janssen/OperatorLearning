@@ -1,5 +1,6 @@
-import torch   
+import torch
 import torch.nn as nn
+
 
 class BranchNet(nn.Module):
     def __init__(self, input_size, hidden_size, output_size, num_hidden_layers):
@@ -13,6 +14,7 @@ class BranchNet(nn.Module):
     def forward(self, x):
         return self.network(x)
 
+
 class TrunkNet(nn.Module):
     def __init__(self, input_size, hidden_size, output_size, num_hidden_layers):
         super(TrunkNet, self).__init__()
@@ -24,10 +26,11 @@ class TrunkNet(nn.Module):
 
     def forward(self, x):
         return self.network(x)
-    
+
+
 class DeepONet(nn.Module):
     def __init__(self, inputs_b, hidden_b, layers_b, inputs_t, hidden_t, layers_t, outputs):
-        super(DeepONet, self).__init__()    
+        super(DeepONet, self).__init__()
         self.branch_net = BranchNet(inputs_b, hidden_b, outputs, layers_b)
         self.trunk_net = TrunkNet(inputs_t, hidden_t, outputs, layers_t)
 
@@ -35,7 +38,8 @@ class DeepONet(nn.Module):
         branch_output = self.branch_net(branch_input)
         trunk_output = self.trunk_net(trunk_input)
         return torch.sum(branch_output * trunk_output, dim=1)
-    
+
+
 class MODeepONet(nn.Module):
     def __init__(self, inputs_b, hidden_b, layers_b, inputs_t, hidden_t, layers_t, outputs, N):
         super(MODeepONet, self).__init__()
@@ -68,6 +72,3 @@ class MODeepONet(nn.Module):
 
         sizes = [base_size + 1 if i < remainder else base_size for i in range(num_splits)]
         return sizes
-
-    
-
