@@ -13,8 +13,19 @@ from datagen import generate_polynomial_data, generate_GRF_data, generate_sine_d
 from deeponet import DeepONet
 
 
-def train_deeponet(data_loader, branch_input_size, trunk_input_size, hidden_size, branch_hidden_layers=3, trunk_hidden_layers=1, num_epochs=1000, learning_rate=0.001, schedule=True, test_loader=None):
-    '''Train a DeepONet model.
+def train_deeponet(
+    data_loader,
+    branch_input_size,
+    trunk_input_size,
+    hidden_size,
+    branch_hidden_layers=3,
+    trunk_hidden_layers=1,
+    num_epochs=1000,
+    learning_rate=0.001,
+    schedule=True,
+    test_loader=None,
+):
+    """Train a DeepONet model.
     The function instantiates a DeepONet model and trains it using the provided DataLoader.
     Note that it assumes equal number of neurons in each hidden layer of the branch and trunk networks.
 
@@ -27,13 +38,23 @@ def train_deeponet(data_loader, branch_input_size, trunk_input_size, hidden_size
     :param trunk_hidden_layers: Number of hidden layers in the trunk network.
 
     :return: Trained DeepONet model and loss history.
-    '''
-    deeponet = DeepONet(branch_input_size, hidden_size, branch_hidden_layers, trunk_input_size, hidden_size, trunk_hidden_layers, hidden_size)
+    """
+    deeponet = DeepONet(
+        branch_input_size,
+        hidden_size,
+        branch_hidden_layers,
+        trunk_input_size,
+        hidden_size,
+        trunk_hidden_layers,
+        hidden_size,
+    )
 
-    criterion = nn.MSELoss(reduction='sum')
+    criterion = nn.MSELoss(reduction="sum")
     optimizer = optim.Adam(deeponet.parameters(), lr=learning_rate)
     if schedule:
-        scheduler = optim.lr_scheduler.LinearLR(optimizer, start_factor=1, end_factor=0.1, total_iters=num_epochs)
+        scheduler = optim.lr_scheduler.LinearLR(
+            optimizer, start_factor=1, end_factor=0.1, total_iters=num_epochs
+        )
 
     train_loss_history = np.zeros(num_epochs)
     test_loss_history = np.zeros(num_epochs // 10)
@@ -53,7 +74,7 @@ def train_deeponet(data_loader, branch_input_size, trunk_input_size, hidden_size
         epoch_loss /= total_predictions
         train_loss_history[epoch] = epoch_loss
         clr = optimizer.param_groups[0]["lr"]
-        progress_bar.set_postfix({'loss': epoch_loss, 'lr': clr})
+        progress_bar.set_postfix({"loss": epoch_loss, "lr": clr})
         scheduler.step()
         if test_loader is not None:
             if epoch % 10 == 0:
@@ -75,7 +96,7 @@ def test_deeponet(model, data_loader):
 
     :return: Total loss and predictions.
     """
-    criterion = nn.MSELoss(reduction='sum')
+    criterion = nn.MSELoss(reduction="sum")
     model.eval()
 
     # Calculate the total number of predictions to pre-allocate the buffer
@@ -92,7 +113,9 @@ def test_deeponet(model, data_loader):
 
             # Store predictions in the buffer
             num_predictions = len(outputs)
-            predictions_buffer[buffer_index:buffer_index + num_predictions] = outputs.cpu().numpy()
+            predictions_buffer[buffer_index : buffer_index + num_predictions] = (
+                outputs.cpu().numpy()
+            )
             buffer_index += num_predictions
 
     # Calculate relative error
@@ -146,13 +169,21 @@ def plot_losses(loss_histories, labels):
             plt.plot(loss, label=label)
     plt.xlabel("Epoch")
     plt.ylabel("Loss")
-    plt.yscale('log')
+    plt.yscale("log")
     plt.title("Training Loss")
     plt.legend()
     plt.show()
 
 
-def plot_results(title, sensor_locations, function_values, ground_truth, y_values, predictions, num_samples=3):
+def plot_results(
+    title,
+    sensor_locations,
+    function_values,
+    ground_truth,
+    y_values,
+    predictions,
+    num_samples=3,
+):
     colors = cycle(plt.cm.tab10.colors)  # Color cycle from a matplotlib colormap
 
     plt.figure(figsize=(12, 6))
@@ -163,8 +194,21 @@ def plot_results(title, sensor_locations, function_values, ground_truth, y_value
     for i in range(num_samples):
         color = next(colors)
         # plt.plot(sensor_locations, function_values[i], label=f"Input Function {i+1}", color=color, linestyle='-', marker='o')
-        plt.plot(sensor_locations, ground_truth[i], label=f"Ground Truth {i+1}", color=color, linestyle='--')
-        plt.plot(y_values, predictions[i], label=f"DeepONet Prediction {i+1}", color=color, linestyle=':', marker='.')
+        plt.plot(
+            sensor_locations,
+            ground_truth[i],
+            label=f"Ground Truth {i+1}",
+            color=color,
+            linestyle="--",
+        )
+        plt.plot(
+            y_values,
+            predictions[i],
+            label=f"DeepONet Prediction {i+1}",
+            color=color,
+            linestyle=":",
+            marker=".",
+        )
     plt.xlabel("Domain")
     plt.ylabel("Function Value")
     plt.title("Function, Ground Truth, and Predictions")
@@ -185,7 +229,14 @@ def plot_results(title, sensor_locations, function_values, ground_truth, y_value
     plt.show()
 
 
-def load_deeponet(path_to_state_dict, branch_input_size, trunk_input_size, hidden_size, branch_hidden_layers, trunk_hidden_layers):
+def load_deeponet(
+    path_to_state_dict,
+    branch_input_size,
+    trunk_input_size,
+    hidden_size,
+    branch_hidden_layers,
+    trunk_hidden_layers,
+):
     """
     Load a DeepONet model from a saved state dictionary.
 
@@ -199,7 +250,15 @@ def load_deeponet(path_to_state_dict, branch_input_size, trunk_input_size, hidde
     # Recreate the model architecture
     # branch_net = BranchNet(branch_input_size, hidden_size, hidden_size, branch_hidden_layers)
     # trunk_net = TrunkNet(trunk_input_size, hidden_size, hidden_size, trunk_hidden_layers)
-    deeponet = DeepONet(branch_input_size, hidden_size, branch_hidden_layers, trunk_input_size, hidden_size, trunk_hidden_layers, hidden_size)
+    deeponet = DeepONet(
+        branch_input_size,
+        hidden_size,
+        branch_hidden_layers,
+        trunk_input_size,
+        hidden_size,
+        trunk_hidden_layers,
+        hidden_size,
+    )
 
     # Load the state dictionary
     state_dict = torch.load(path_to_state_dict)
@@ -232,16 +291,46 @@ if __name__ == "__main__":
         grf_data_loader = create_dataloader(grf_data, sensor_points, shuffle=True)
 
         # Train models
-        poly_deeponet, poly_loss = train_deeponet(poly_data_loader, branch_input_size, trunk_input_size, hidden_size, num_epochs, branch_hidden_layers, trunk_hidden_layers)
-        grf_deeponet, grf_loss = train_deeponet(grf_data_loader, branch_input_size, trunk_input_size, hidden_size, num_epochs, branch_hidden_layers, trunk_hidden_layers)
+        poly_deeponet, poly_loss = train_deeponet(
+            poly_data_loader,
+            branch_input_size,
+            trunk_input_size,
+            hidden_size,
+            num_epochs,
+            branch_hidden_layers,
+            trunk_hidden_layers,
+        )
+        grf_deeponet, grf_loss = train_deeponet(
+            grf_data_loader,
+            branch_input_size,
+            trunk_input_size,
+            hidden_size,
+            num_epochs,
+            branch_hidden_layers,
+            trunk_hidden_layers,
+        )
         torch.save(poly_deeponet.state_dict(), "poly_deeponet.pt")
         torch.save(grf_deeponet.state_dict(), "grf_deeponet.pt")
 
         # Plot the loss trajectories
-        plot_losses([poly_loss, grf_loss], ['Polynomial Data', 'GRF Data'])
+        plot_losses([poly_loss, grf_loss], ["Polynomial Data", "GRF Data"])
     else:
-        poly_deeponet = load_deeponet("poly_deeponet.pt", branch_input_size, trunk_input_size, hidden_size, branch_hidden_layers, trunk_hidden_layers)
-        grf_deeponet = load_deeponet("grf_deeponet.pt", branch_input_size, trunk_input_size, hidden_size, branch_hidden_layers, trunk_hidden_layers)
+        poly_deeponet = load_deeponet(
+            "poly_deeponet.pt",
+            branch_input_size,
+            trunk_input_size,
+            hidden_size,
+            branch_hidden_layers,
+            trunk_hidden_layers,
+        )
+        grf_deeponet = load_deeponet(
+            "grf_deeponet.pt",
+            branch_input_size,
+            trunk_input_size,
+            hidden_size,
+            branch_hidden_layers,
+            trunk_hidden_layers,
+        )
 
     # Generate sine data for testing
     sine_data = generate_sine_data(1000, sensor_points)
@@ -263,5 +352,21 @@ if __name__ == "__main__":
     poly_predictions = poly_predictions.reshape(-1, len(sensor_points))
     grf_predictions = grf_predictions.reshape(-1, len(sensor_points))
     sine_data = np.array(sine_data)
-    plot_results('Polynomial data', sensor_points, sine_data[:, 0], sine_data[:, 1], sensor_points, poly_predictions, num_samples_to_plot)
-    plot_results('GRF data', sensor_points, sine_data[:, 0], sine_data[:, 1], sensor_points, grf_predictions, num_samples_to_plot)
+    plot_results(
+        "Polynomial data",
+        sensor_points,
+        sine_data[:, 0],
+        sine_data[:, 1],
+        sensor_points,
+        poly_predictions,
+        num_samples_to_plot,
+    )
+    plot_results(
+        "GRF data",
+        sensor_points,
+        sine_data[:, 0],
+        sine_data[:, 1],
+        sensor_points,
+        grf_predictions,
+        num_samples_to_plot,
+    )

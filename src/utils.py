@@ -24,7 +24,7 @@ def save_model(model, model_name, hyperparameters, base_dir="models"):
     torch.save(model.state_dict(), model_path)
 
     # Save hyperparameters as a YAML file
-    hyperparameters_path = os.path.join(model_dir, "hyperparameters.yaml")
+    hyperparameters_path = os.path.join(model_dir, f"{model_name}_config.yaml")
     with open(hyperparameters_path, "w") as file:
         yaml.dump(hyperparameters, file)
 
