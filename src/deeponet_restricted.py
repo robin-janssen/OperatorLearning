@@ -5,8 +5,8 @@ import torch
 import torch.nn as nn
 
 from datagen import generate_polynomial_data_coeff
-from plotting import plot_functions_only
-from training import train_deeponet, plot_losses, plot_results, load_deeponet
+from plotting import plot_functions_only, plot_losses, plot_results
+from training import train_deeponet, load_deeponet
 from utils import save_model
 from training import create_dataloader_modified
 

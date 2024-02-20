@@ -9,18 +9,17 @@ import numpy as np
 
 # from datagen import generate_decaying_sines, surface_plot
 from datagen import generate_decaying_polynomials
-from plotting import heatmap_plot, plot_functions_only, surface_plot
+from plotting import heatmap_plot, plot_functions_only, surface_plot, plot_losses
 from training import (
     train_deeponet_visualized,
     train_multionet_visualized,
-    plot_losses,
     load_deeponet,
     load_multionet,
     test_deeponet,
     test_multionet_polynomial,
 )
 from utils import save_model
-from deeponet_time_dependent import (
+from training import (
     create_dataloader_2D_frac,
     create_dataloader_2D_frac_coeff,
 )
