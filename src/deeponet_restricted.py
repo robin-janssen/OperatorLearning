@@ -1,76 +1,14 @@
+# Comparing the performanceof DeepONet trained on the sensor locations of polynomials and the coefficients of polynomials
+
 import numpy as np
 import torch
-from torch.utils.data import DataLoader, TensorDataset
 import torch.nn as nn
 
-from datagen import numerical_integration
+from datagen import generate_polynomial_data_coeff
 from plotting import plot_functions_only
-from deeponet_training import train_deeponet, plot_losses, plot_results, load_deeponet
+from training import train_deeponet, plot_losses, plot_results, load_deeponet
 from utils import save_model
-
-
-# Modified generate_polynomial_data function
-def generate_polynomial_data_coeff(
-    num_samples, sensor_points, scale=1, method="trapezoidal", order=5
-):
-    """Generate a polynomial dataset with random coefficients as in generate_polynomial_data,
-    but return the coefficients of the input polynomial.
-    """
-    data = []
-    for _ in range(num_samples):
-        # Random coefficients for a cubic polynomial
-        coefficients = np.random.uniform(-scale, scale, order + 1)
-        # coefficients_1 = np.random.uniform(-3*scale, 3*scale, 3)
-        # coefficients_2 = np.random.uniform(-scale, scale, 3)
-        # coefficients = np.concatenate((coefficients_1, coefficients_2))
-        polynomial = np.poly1d(coefficients)
-        poly = polynomial(sensor_points)
-
-        # Compute antiderivative
-        # antiderivative = polynomial.integ()
-        antiderivative = numerical_integration(poly, sensor_points, method=method)
-
-        data.append((poly, antiderivative, coefficients))
-
-    return data
-
-
-def create_dataloader_modified(
-    data, sensor_points, batch_size=32, shuffle=False, coeff=False
-):
-    """
-    Create a DataLoader for DeepONet.
-
-    :param data: List of tuples (function_values, antiderivative_values, coefficients).
-    :param sensor_points: Array of sensor locations in the domain.
-    :param batch_size: Batch size for the DataLoader.
-    :return: A DataLoader object.
-    """
-    branch_inputs = []
-    trunk_inputs = []
-    targets = []
-
-    if coeff:
-        for function_values, antiderivative_values, coefficients in data:
-            for i in range(len(sensor_points)):
-                branch_inputs.append(coefficients)
-                trunk_inputs.append([sensor_points[i]])
-                targets.append(antiderivative_values[i])
-    else:
-        for function_values, antiderivative_values, coefficients in data:
-            for i in range(len(sensor_points)):
-                branch_inputs.append(function_values)
-                trunk_inputs.append([sensor_points[i]])
-                targets.append(antiderivative_values[i])
-
-    # Convert to PyTorch tensors
-    branch_inputs_tensor = torch.tensor(np.array(branch_inputs), dtype=torch.float32)
-    trunk_inputs_tensor = torch.tensor(trunk_inputs, dtype=torch.float32)
-    targets_tensor = torch.tensor(targets, dtype=torch.float32)
-
-    # Create a TensorDataset and DataLoader
-    dataset = TensorDataset(branch_inputs_tensor, trunk_inputs_tensor, targets_tensor)
-    return DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
+from training import create_dataloader_modified
 
 
 def test_deeponet_coeff(model, data_loader, sensor_points=[], order=5, coeff=False):

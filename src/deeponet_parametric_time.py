@@ -1,23 +1,31 @@
+# This script investigates the performance of DeepONet on time-dependent data, where the time-dependence differs for each datapoint.
+# The DeepONet receives an extra input (the decay rate).
+
 import numpy as np
 
 # from datagen import generate_decaying_sines, surface_plot
 from datagen import generate_random_decaying_sines
 from plotting import heatmap_plot, plot_functions_only
-from deeponet_training import train_deeponet, plot_losses, load_deeponet, test_deeponet
+from training import (
+    train_deeponet_visualized,
+    plot_losses,
+    load_deeponet,
+    test_deeponet,
+)
 from deeponet_time_dependent import create_dataloader_2D_frac
 from utils import save_model
 
 
 if __name__ == "__main__":
     TRAIN = False
-    branch_input_size = 22
+    branch_input_size = 32
     trunk_input_size = 2
     hidden_size = 40
     branch_hidden_layers = 3
     trunk_hidden_layers = 3
     num_epochs = 400
     learning_rate = 3e-4
-    N_timesteps = 21
+    N_timesteps = 16
     decay_rate = 1
     fraction = 0.25
     num_samples_train = 800
@@ -96,7 +104,7 @@ if __name__ == "__main__":
     # Now we need to train/load the DeepONet
     if TRAIN:
         # Train the DeepONet
-        param_deeponet, loss, test_loss = train_deeponet(
+        param_deeponet, loss, test_loss = train_deeponet_visualized(
             dataloader_param,
             branch_input_size,
             trunk_input_size,
@@ -107,7 +115,7 @@ if __name__ == "__main__":
             learning_rate,
             test_loader=dataloader_test_param,
         )
-        no_param_deeponet, np_loss, np_test_loss = train_deeponet(
+        no_param_deeponet, np_loss, np_test_loss = train_deeponet_visualized(
             dataloader_no_param,
             branch_input_size - 1,
             trunk_input_size,
