@@ -1,70 +1,14 @@
+# Comparing the performanceof DeepONet trained on the sensor locations of polynomials and the coefficients of polynomials
+
 import numpy as np
 import torch
-from torch.utils.data import DataLoader, TensorDataset
 import torch.nn as nn
 
-from datagen import numerical_integration, plot_functions_only
-from deeponet_training import train_deeponet, plot_losses, plot_results, load_deeponet
-
-
-# Modified generate_polynomial_data function
-def generate_polynomial_data_coeff(num_samples, sensor_points, scale=1, method='trapezoidal', order=5):
-    '''Generate a polynomial dataset with random coefficients as in generate_polynomial_data,
-    but return the coefficients of the input polynomial.
-    '''
-    data = []
-    for _ in range(num_samples):
-        # Random coefficients for a cubic polynomial
-        coefficients = np.random.uniform(-scale, scale, order + 1)
-        # coefficients_1 = np.random.uniform(-3*scale, 3*scale, 3)
-        # coefficients_2 = np.random.uniform(-scale, scale, 3)
-        # coefficients = np.concatenate((coefficients_1, coefficients_2))
-        polynomial = np.poly1d(coefficients)
-        poly = polynomial(sensor_points)
-
-        # Compute antiderivative
-        # antiderivative = polynomial.integ()
-        antiderivative = numerical_integration(poly, sensor_points, method=method)
-
-        data.append((poly, antiderivative, coefficients))
-
-    return data
-
-
-def create_dataloader_modified(data, sensor_points, batch_size=32, shuffle=False, coeff=False):
-    """
-    Create a DataLoader for DeepONet.
-
-    :param data: List of tuples (function_values, antiderivative_values, coefficients).
-    :param sensor_points: Array of sensor locations in the domain.
-    :param batch_size: Batch size for the DataLoader.
-    :return: A DataLoader object.
-    """
-    branch_inputs = []
-    trunk_inputs = []
-    targets = []
-
-    if coeff:
-        for function_values, antiderivative_values, coefficients in data:
-            for i in range(len(sensor_points)):
-                branch_inputs.append(coefficients)
-                trunk_inputs.append([sensor_points[i]])
-                targets.append(antiderivative_values[i])
-    else:
-        for function_values, antiderivative_values, coefficients in data:
-            for i in range(len(sensor_points)):
-                branch_inputs.append(function_values)
-                trunk_inputs.append([sensor_points[i]])
-                targets.append(antiderivative_values[i])
-
-    # Convert to PyTorch tensors
-    branch_inputs_tensor = torch.tensor(np.array(branch_inputs), dtype=torch.float32)
-    trunk_inputs_tensor = torch.tensor(trunk_inputs, dtype=torch.float32)
-    targets_tensor = torch.tensor(targets, dtype=torch.float32)
-
-    # Create a TensorDataset and DataLoader
-    dataset = TensorDataset(branch_inputs_tensor, trunk_inputs_tensor, targets_tensor)
-    return DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
+from datagen import generate_polynomial_data_coeff
+from plotting import plot_functions_only
+from training import train_deeponet, plot_losses, plot_results, load_deeponet
+from utils import save_model
+from training import create_dataloader_modified
 
 
 def test_deeponet_coeff(model, data_loader, sensor_points=[], order=5, coeff=False):
@@ -79,7 +23,7 @@ def test_deeponet_coeff(model, data_loader, sensor_points=[], order=5, coeff=Fal
     :return: Total loss and predictions.
     """
     model.eval()
-    criterion = nn.MSELoss(reduction='sum')
+    criterion = nn.MSELoss(reduction="sum")
 
     # Calculate the total number of predictions to pre-allocate the buffer
     total_predictions = sum(len(targets) for _, _, targets in data_loader)
@@ -90,22 +34,32 @@ def test_deeponet_coeff(model, data_loader, sensor_points=[], order=5, coeff=Fal
         for branch_inputs, trunk_inputs, targets in data_loader:
             outputs = model(branch_inputs, trunk_inputs)
             num_predictions = len(targets)
-            all_predictions[buffer_index:buffer_index + num_predictions] = outputs.cpu().numpy()
-            all_targets[buffer_index:buffer_index + num_predictions] = targets.cpu().numpy()
+            all_predictions[buffer_index : buffer_index + num_predictions] = (
+                outputs.cpu().numpy()
+            )
+            all_targets[buffer_index : buffer_index + num_predictions] = (
+                targets.cpu().numpy()
+            )
             buffer_index += num_predictions
 
     if coeff:
         total_loss = 0
         num_polynomials = all_predictions.shape[0] / (order + 1)
         for i in range(num_polynomials):
-            poly_pred = np.poly1d(all_predictions[i * (order + 1):(i + 1) * (order + 1)])
+            poly_pred = np.poly1d(
+                all_predictions[i * (order + 1) : (i + 1) * (order + 1)]
+            )
             predictions = poly_pred(sensor_points)
-            poly_true = np.poly1d(all_targets[i * (order + 1):(i + 1) * (order + 1)])
+            poly_true = np.poly1d(all_targets[i * (order + 1) : (i + 1) * (order + 1)])
             ground_truth = poly_true(sensor_points)
             loss = criterion(torch.tensor(predictions), torch.tensor(ground_truth))
             total_loss += loss.item()
     else:
-        total_loss = criterion(torch.tensor(all_predictions), torch.tensor(all_targets)).cpu().numpy()
+        total_loss = (
+            criterion(torch.tensor(all_predictions), torch.tensor(all_targets))
+            .cpu()
+            .numpy()
+        )
 
     return total_loss, all_predictions
 
@@ -118,21 +72,37 @@ if __name__ == "__main__":
     # We will use the same DeepONet architecture for both cases, but we will need to change the number of inputs for the branch network
 
     # Lets generate some data
-    num_samples = 500
+    num_samples_train = 500
+    num_samples_test = 100
     sensor_points = np.linspace(0, 1, 101)
-    data = generate_polynomial_data_coeff(num_samples, sensor_points, method='trapezoidal', scale=3)
-    data_coeff = generate_polynomial_data_coeff(num_samples, sensor_points, method='trapezoidal', scale=3)
-    test_data = generate_polynomial_data_coeff(num_samples, sensor_points, method='trapezoidal', scale=3)
+    data = generate_polynomial_data_coeff(
+        num_samples_train, sensor_points, method="trapezoidal", scale=3
+    )
+    data_coeff = generate_polynomial_data_coeff(
+        num_samples_train, sensor_points, method="trapezoidal", scale=3
+    )
+    test_data = generate_polynomial_data_coeff(
+        num_samples_test, sensor_points, method="trapezoidal", scale=3
+    )
 
     # Generate dataloaders for both datasets
-    train_loader = create_dataloader_modified(data, sensor_points, batch_size=32, shuffle=True, coeff=False)
-    train_loader_coeff = create_dataloader_modified(data_coeff, sensor_points, batch_size=32, shuffle=True, coeff=True)
-    test_loader = create_dataloader_modified(test_data, sensor_points, batch_size=32, shuffle=False, coeff=False)
-    test_loader_coeff = create_dataloader_modified(test_data, sensor_points, batch_size=32, shuffle=False, coeff=True)
+    train_loader = create_dataloader_modified(
+        data, sensor_points, batch_size=32, shuffle=True, coeff=False
+    )
+    train_loader_coeff = create_dataloader_modified(
+        data_coeff, sensor_points, batch_size=32, shuffle=True, coeff=True
+    )
+    test_loader = create_dataloader_modified(
+        test_data, sensor_points, batch_size=32, shuffle=False, coeff=False
+    )
+    test_loader_coeff = create_dataloader_modified(
+        test_data, sensor_points, batch_size=32, shuffle=False, coeff=True
+    )
 
+    plot_data = np.array([fct for fct, _, _ in data])
     # Now we need to plot some of the data
-    plot_functions_only(data, sensor_points, 300)
-    plot_functions_only(data_coeff, sensor_points, 300)
+    plot_functions_only(plot_data, sensor_points, 300)
+    # plot_functions_only(np.array(data_coeff), sensor_points, 300)
 
     # Define two DeepONets, one for each dataset
     branch_hidden_layers = 3
@@ -142,9 +112,9 @@ if __name__ == "__main__":
 
     # Now we need to train the two DeepONets
     # We will use the same training parameters for both
-    epochs = 20
+    epochs = 50
     learning_rate = 0.001
-    TRAIN = True
+    TRAIN = False
 
     if TRAIN:
         deeponet, loss = train_deeponet(
@@ -155,9 +125,23 @@ if __name__ == "__main__":
             num_epochs=epochs,
             branch_hidden_layers=branch_hidden_layers,
             trunk_hidden_layers=trunk_hidden_layers,
-            learning_rate=learning_rate
+            learning_rate=learning_rate,
         )
-        torch.save(deeponet.state_dict(), 'deeponet_restricted.pth')
+        save_model(
+            deeponet,
+            "deeponet_restricted",
+            {
+                "branch_input_size": 101,
+                "trunk_input_size": trunk_input_size,
+                "hidden_size": hidden_size,
+                "branch_hidden_layers": branch_hidden_layers,
+                "trunk_hidden_layers": trunk_hidden_layers,
+                "num_epochs": epochs,
+                "learning_rate": learning_rate,
+                "num_samples_train": num_samples_train,
+                "num_samples_test": num_samples_test,
+            },
+        )
 
         deeponet_coeff, loss_coeff = train_deeponet(
             data_loader=train_loader_coeff,
@@ -167,21 +151,51 @@ if __name__ == "__main__":
             num_epochs=epochs,
             branch_hidden_layers=branch_hidden_layers,
             trunk_hidden_layers=trunk_hidden_layers,
-            learning_rate=learning_rate
+            learning_rate=learning_rate,
         )
-        torch.save(deeponet_coeff.state_dict(), 'deeponet_restricted_coeff.pth')
+        save_model(
+            deeponet_coeff,
+            "deeponet_restricted_coeff",
+            {
+                "branch_input_size": 6,
+                "trunk_input_size": trunk_input_size,
+                "hidden_size": hidden_size,
+                "branch_hidden_layers": branch_hidden_layers,
+                "trunk_hidden_layers": trunk_hidden_layers,
+                "num_epochs": epochs,
+                "learning_rate": learning_rate,
+                "num_samples_train": num_samples_train,
+                "num_samples_test": num_samples_test,
+            },
+        )
 
         plot_losses((loss, loss_coeff), ("Standard", "Coefficients"))
 
     else:
-        deeponet = load_deeponet('deeponet_restricted.pth', 101, trunk_input_size, hidden_size, branch_hidden_layers, trunk_hidden_layers)
-        deeponet_coeff = load_deeponet('deeponet_restricted_coeff.pth', 6, trunk_input_size, hidden_size, branch_hidden_layers, trunk_hidden_layers)
+        deeponet = load_deeponet(
+            "models/06-02/deeponet_restricted.pth",
+            101,
+            trunk_input_size,
+            hidden_size,
+            branch_hidden_layers,
+            trunk_hidden_layers,
+        )
+        deeponet_coeff = load_deeponet(
+            "models/06-02/deeponet_restricted_coeff.pth",
+            6,
+            trunk_input_size,
+            hidden_size,
+            branch_hidden_layers,
+            trunk_hidden_layers,
+        )
 
     # Now we need to test the two DeepONets
     # We will use the same testing parameters for both
 
     standard_error, standard_prediction = test_deeponet_coeff(deeponet, test_loader)
-    coeff_error, coeff_prediction = test_deeponet_coeff(deeponet_coeff, test_loader_coeff)
+    coeff_error, coeff_prediction = test_deeponet_coeff(
+        deeponet_coeff, test_loader_coeff
+    )
 
     print("Standard DeepONet error: ", standard_error)
     print("DeepONet with coefficients error: ", coeff_error)
@@ -196,7 +210,21 @@ if __name__ == "__main__":
         ground_truth.append(gt)
         coefficients.append(coeff)
 
-    plot_results('Standard DeepONet', sensor_points, fct_values, ground_truth, sensor_points, standard_prediction)
-    plot_results('DeepONet with Coefficients', sensor_points, fct_values, ground_truth, sensor_points, coeff_prediction)
+    plot_results(
+        "Standard DeepONet",
+        sensor_points,
+        fct_values,
+        ground_truth,
+        sensor_points,
+        standard_prediction,
+    )
+    plot_results(
+        "DeepONet with Coefficients",
+        sensor_points,
+        fct_values,
+        ground_truth,
+        sensor_points,
+        coeff_prediction,
+    )
 
     print("Finished training")
