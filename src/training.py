@@ -10,7 +10,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, TensorDataset
 
-from deeponet import DeepONet, MODeepONet2
+from deeponet import DeepONet, MultiONet, MultiONetB, MultiONetT
 from plotting import streamlit_visualization_history
 from utils import time_execution
 
@@ -221,6 +221,7 @@ def train_multionet_visualized(
     test_loader: DataLoader = None,
     N_sensors: int = 101,
     N_timesteps: int = 101,
+    architecture: str = "both",
 ) -> tuple:
     """Train a DeepONet model.
     The function instantiates a DeepONet model and trains it using the provided DataLoader.
@@ -235,19 +236,43 @@ def train_multionet_visualized(
     :param trunk_hidden_layers: Number of hidden layers in the trunk network.
     :param output_size: Number of neurons in the last layer.
     :param N_outputs: Number of outputs.
+    :param architecture: Architecture of the MODeepONet model. Can be "branch", "trunk", or "both".
 
     :return: Trained DeepONet model and loss history.
     """
-    deeponet = MODeepONet2(
-        branch_input_size,
-        hidden_size,
-        branch_hidden_layers,
-        trunk_input_size,
-        hidden_size,
-        trunk_hidden_layers,
-        output_size,
-        N_outputs,
-    )
+    if architecture == "both":
+        deeponet = MultiONet(
+            branch_input_size,
+            hidden_size,
+            branch_hidden_layers,
+            trunk_input_size,
+            hidden_size,
+            trunk_hidden_layers,
+            output_size,
+            N_outputs,
+        )
+    elif architecture == "branch":
+        deeponet = MultiONetB(
+            branch_input_size,
+            hidden_size,
+            branch_hidden_layers,
+            trunk_input_size,
+            hidden_size,
+            trunk_hidden_layers,
+            output_size,
+            N_outputs,
+        )
+    elif architecture == "trunk":
+        deeponet = MultiONetT(
+            branch_input_size,
+            hidden_size,
+            branch_hidden_layers,
+            trunk_input_size,
+            hidden_size,
+            trunk_hidden_layers,
+            output_size,
+            N_outputs,
+        )
 
     criterion = nn.MSELoss(reduction="sum")
     optimizer = optim.Adam(deeponet.parameters(), lr=learning_rate)
@@ -329,6 +354,162 @@ def train_multionet_visualized(
         return deeponet, train_loss_history
 
 
+@time_execution
+def train_multionet_poly_visualized(
+    data_loader: DataLoader,
+    branch_input_size: int,
+    trunk_input_size: int,
+    hidden_size: int,
+    branch_hidden_layers: int = 3,
+    trunk_hidden_layers: int = 3,
+    output_size: int = 40,
+    N_outputs: int = 5,
+    num_epochs: int = 1000,
+    learning_rate: float = 0.001,
+    schedule: bool = True,
+    test_loader: DataLoader = None,
+    sensor_locations: np.array = np.linspace(0, 1, 101),
+    N_timesteps: int = 101,
+    architecture: str = "both",
+) -> tuple:
+    """Train a DeepONet model.
+    The function instantiates a DeepONet model and trains it using the provided DataLoader.
+    Note that it assumes equal number of neurons in each hidden layer of the branch and trunk networks.
+
+    :param data_loader: A DataLoader object.
+    :param branch_input_size: Input size for the branch network.
+    :param trunk_input_size: Input size for the trunk network.
+    :param hidden_size: Number of hidden units in each layer.
+    :param num_epochs: Number of epochs to train for.
+    :param branch_hidden_layers: Number of hidden layers in the branch network.
+    :param trunk_hidden_layers: Number of hidden layers in the trunk network.
+    :param output_size: Number of neurons in the last layer.
+    :param N_outputs: Number of outputs.
+    :param architecture: Architecture of the MODeepONet model. Can be "branch", "trunk", or "both".
+
+    :return: Trained DeepONet model and loss history.
+    """
+    if architecture == "both":
+        deeponet = MultiONet(
+            branch_input_size,
+            hidden_size,
+            branch_hidden_layers,
+            trunk_input_size,
+            hidden_size,
+            trunk_hidden_layers,
+            output_size,
+            N_outputs,
+        )
+    elif architecture == "branch":
+        deeponet = MultiONetB(
+            branch_input_size,
+            hidden_size,
+            branch_hidden_layers,
+            trunk_input_size,
+            hidden_size,
+            trunk_hidden_layers,
+            output_size,
+            N_outputs,
+        )
+    elif architecture == "trunk":
+        deeponet = MultiONetT(
+            branch_input_size,
+            hidden_size,
+            branch_hidden_layers,
+            trunk_input_size,
+            hidden_size,
+            trunk_hidden_layers,
+            output_size,
+            N_outputs,
+        )
+
+    sensor_locations_tensor = torch.tensor(
+        sensor_locations, dtype=torch.float32, device="cpu"
+    )
+    N_sensors = len(sensor_locations)
+
+    criterion = nn.MSELoss(reduction="sum")
+    optimizer = optim.Adam(deeponet.parameters(), lr=learning_rate)
+    if schedule:
+        scheduler = optim.lr_scheduler.LinearLR(
+            optimizer, start_factor=1, end_factor=0.1, total_iters=num_epochs
+        )
+    else:
+        scheduler = optim.lr_scheduler.LinearLR(
+            optimizer, start_factor=1, end_factor=1, total_iters=num_epochs
+        )
+
+    train_loss_history = np.zeros(num_epochs)
+    test_loss_history = np.zeros(num_epochs)
+    # output_history = np.zeros((num_epochs, 3, N_outputs, N_timesteps))
+    output_history = np.zeros((num_epochs, 3, N_sensors, N_timesteps))
+
+    total_predictions = sum(len(targets) for _, _, targets in data_loader)
+
+    progress_bar = tqdm(range(num_epochs), desc="Training Progress")
+    for epoch in progress_bar:
+        epoch_loss = 0
+        for branch_inputs, trunk_inputs, targets in data_loader:
+            optimizer.zero_grad()
+            outputs = deeponet(branch_inputs, trunk_inputs)
+            outputs_evaluated = poly_eval_torch(
+                outputs.reshape(-1, outputs.shape[-1]), sensor_locations_tensor
+            )
+            targets_evaluated = poly_eval_torch(
+                targets.reshape(-1, targets.shape[-1]), sensor_locations_tensor
+            )
+            loss = criterion(outputs_evaluated, targets_evaluated)
+            loss.backward()
+            optimizer.step()
+            epoch_loss += loss.item()
+        epoch_loss /= total_predictions * N_sensors
+        train_loss_history[epoch] = epoch_loss
+        clr = optimizer.param_groups[0]["lr"]
+        progress_bar.set_postfix({"loss": epoch_loss, "lr": clr})
+        scheduler.step()
+        # if epoch % 10 == 0:
+        if test_loader is not None:
+            test_loss, outputs, targets = test_multionet_poly(
+                deeponet, test_loader, sensor_locations
+            )
+            test_loss_history[epoch] = test_loss
+            outputs = outputs.reshape(-1, N_timesteps, N_sensors)
+            outputs = outputs[:3].transpose(0, 2, 1)
+            if epoch == 0:
+                targets = targets.reshape(-1, N_timesteps, N_sensors)[:3]
+                targets_vis = targets.transpose(0, 2, 1)
+            output_history[epoch] = outputs
+        streamlit_visualization_history(
+            train_loss_history[: epoch + 1],
+            test_loss_history[: epoch + 1],
+            output_history,
+            targets_vis,
+            epoch,
+        )
+
+    if test_loader is not None:
+        return deeponet, train_loss_history, test_loss_history
+    else:
+        return deeponet, train_loss_history
+
+
+def poly_eval_torch(p, x):
+    """
+    Evaluate a polynomial at given points in PyTorch.
+
+    :param p: A tensor of shape [batch_size, n_coeffs] containing the coefficients of the polynomial.
+    :param x: A tensor of shape [n_points] containing the x-values at which to evaluate the polynomial.
+    :return: A tensor of shape [batch_size, n_points] with the evaluation of the polynomial at the x-values.
+    """
+    n = p.shape[1]  # Number of coefficients
+    x = x.unsqueeze(0).repeat(p.shape[0], 1)  # Shape [batch_size, n_points]
+    powers = torch.arange(
+        n - 1, -1, -1, device=p.device
+    )  # Exponents for each coefficient
+    x_powers = x.unsqueeze(-1).pow(powers)  # Shape [batch_size, n_points, n_coeffs]
+    return torch.sum(p.unsqueeze(1) * x_powers, dim=-1)  # Polynomial evaluation
+
+
 def test_deeponet(model: Type[DeepONet], data_loader: DataLoader) -> tuple:
     """
     Test a DeepONet model.
@@ -378,7 +559,54 @@ def test_deeponet(model: Type[DeepONet], data_loader: DataLoader) -> tuple:
     return total_loss, predictions_buffer, targets_buffer
 
 
-def test_multionet_polynomial(
+def test_multionet_poly(
+    model: Type[DeepONet], data_loader: DataLoader, sensor_locations: np.array
+) -> tuple:
+    criterion = nn.MSELoss(reduction="sum")
+    model.eval()
+
+    # Convert sensor locations to a PyTorch tensor
+    sensor_locations_tensor = torch.tensor(
+        sensor_locations, dtype=torch.float32, device="cpu"
+    )  # Assuming model has .device attribute
+
+    total_loss = 0
+    total_predictions = len(data_loader.dataset)  # Number of total predictions
+    # Pre-allocate buffers
+    predictions_buffer = np.empty((total_predictions, len(sensor_locations)))
+    targets_buffer = np.empty((total_predictions, len(sensor_locations)))
+
+    buffer_index = 0
+
+    with torch.no_grad():
+        for branch_inputs, trunk_inputs, targets in data_loader:
+            outputs = model(branch_inputs, trunk_inputs)
+
+            # Evaluate the polynomial at the sensor locations for both outputs and targets
+            polynomial_values = poly_eval_torch(outputs, sensor_locations_tensor)
+            target_values = poly_eval_torch(targets, sensor_locations_tensor)
+
+            # Compute the loss
+            loss = criterion(polynomial_values, target_values)
+            total_loss += loss.item()
+
+            # Store predictions and targets in buffers
+            n = branch_inputs.size(0)  # Number of samples in the batch
+            predictions_buffer[buffer_index : buffer_index + n, :] = (
+                polynomial_values.cpu().numpy()
+            )
+            targets_buffer[buffer_index : buffer_index + n, :] = (
+                target_values.cpu().numpy()
+            )
+            buffer_index += n
+
+    # Calculate average loss
+    total_loss /= total_predictions * len(sensor_locations)
+
+    return total_loss, predictions_buffer, targets_buffer
+
+
+def test_multionet_polynomial_old(
     model: Type[DeepONet], data_loader: DataLoader, output_locations: np.array
 ) -> tuple:
     """
@@ -748,6 +976,7 @@ def load_multionet(
     trunk_hidden_layers: int,
     output_neurons: int,
     N_outputs: int,
+    architecture: str = "both",
 ):
     """
     Load a DeepONet model from a saved state dictionary.
@@ -757,20 +986,43 @@ def load_multionet(
     :param trunk_input_size: Input size for the trunk network.
     :param hidden_size: Number of hidden units in each layer.
     :param num_hidden_layers: Number of hidden layers in each network.
+    :param architecture: Architecture of the MODeepONet model. Can be "branch", "trunk", or "both".
     :return: Loaded DeepONet model.
     """
     # Recreate the model architecture
-    deeponet = MODeepONet2(
-        branch_input_size,
-        hidden_size,
-        branch_hidden_layers,
-        trunk_input_size,
-        hidden_size,
-        trunk_hidden_layers,
-        output_neurons,
-        N_outputs,
-    )
-
+    if architecture == "both":
+        deeponet = MultiONet(
+            branch_input_size,
+            hidden_size,
+            branch_hidden_layers,
+            trunk_input_size,
+            hidden_size,
+            trunk_hidden_layers,
+            output_neurons,
+            N_outputs,
+        )
+    elif architecture == "branch":
+        deeponet = MultiONetB(
+            branch_input_size,
+            hidden_size,
+            branch_hidden_layers,
+            trunk_input_size,
+            hidden_size,
+            trunk_hidden_layers,
+            output_neurons,
+            N_outputs,
+        )
+    elif architecture == "trunk":
+        deeponet = MultiONetT(
+            branch_input_size,
+            hidden_size,
+            branch_hidden_layers,
+            trunk_input_size,
+            hidden_size,
+            trunk_hidden_layers,
+            output_neurons,
+            N_outputs,
+        )
     # Load the state dictionary
     state_dict = torch.load(path_to_state_dict)
     deeponet.load_state_dict(state_dict)

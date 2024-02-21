@@ -301,13 +301,72 @@ def heatmap_plot(
             axs[2, i].set_ylabel("Time")
 
     # Add a common colorbar
-    # cbar = fig.colorbar(im, ax=axs.ravel().tolist(), orientation='vertical')
-    # cbar.set_label('Value')
     cbar_ax = fig.add_axes([0.92, 0.15, 0.02, 0.7])  # [left, bottom, width, height]
     fig.colorbar(im, cax=cbar_ax)
-    # fig.subplots_adjust(right=2)  # Adjust as needed
 
-    # plt.tight_layout()
+    plt.show()
+
+
+def heatmap_plot_errors(
+    sensor_locations: np.array,
+    timesteps: np.array,
+    errors: list,
+    num_samples_to_plot: int = 3,
+    title: str = "Model Comparison via Error Visualization",
+) -> None:
+    """
+    Plot the error evolution of different models over time using heat maps with a common colorbar.
+
+    :param sensor_locations: Array of sensor locations.
+    :param timesteps: Array of timesteps.
+    :param errors: List of 3D arrays of error values for different models.
+    :param num_samples_to_plot: Number of samples to plot.
+    :param title: Title of the plot.
+    """
+    num_models = len(errors)  # Determine number of models based on the list length
+    figsize = (12, 3 * num_models)  # Adjust figure size based on the number of models
+    fig, axs = plt.subplots(
+        num_models,
+        num_samples_to_plot,
+        figsize=figsize,
+        squeeze=False,
+    )
+    fig.suptitle(title)
+
+    # Determine common vmin and vmax for color scaling across all models
+    vmin = min(error.min() for error in errors)
+    vmax = max(error.max() for error in errors)
+
+    for model_idx, model_errors in enumerate(errors):
+        model_errors = model_errors[:num_samples_to_plot].transpose(
+            0, 2, 1
+        )  # Adjust data shape
+
+        for sample_idx in range(num_samples_to_plot):
+            im = axs[model_idx, sample_idx].imshow(
+                model_errors[sample_idx],
+                aspect="equal",
+                origin="lower",
+                extent=[
+                    sensor_locations[0],
+                    sensor_locations[-1],
+                    timesteps[0],
+                    timesteps[-1],
+                ],
+                vmin=vmin,
+                vmax=vmax,
+            )
+            axs[model_idx, sample_idx].set_title(
+                f"Model {model_idx+1} Error {sample_idx+1}"
+            )
+            axs[model_idx, sample_idx].set_xlabel("Sensor Location")
+            axs[model_idx, sample_idx].set_ylabel("Time")
+
+    # Adjust colorbar to fit the height of the plot dynamically
+    cbar_ax = fig.add_axes([0.92, 0.15, 0.02, 0.7])  # Adjust as necessary
+    fig.colorbar(im, cax=cbar_ax)
+
+    # plt.tight_layout(rect=[0, 0, 0.9, 1])  # Adjust layout to prevent overlap
     plt.show()
 
 
