@@ -18,12 +18,13 @@ from plotting import (
     plot_losses,
 )
 from training import (
-    train_multionet_visualized,
+    train_multionet_poly_coeff,
     load_multionet,
     test_multionet_polynomial_old,
 )
 from utils import save_model
 from training import create_dataloader_2D_frac_coeff
+from torchinfo import summary
 
 if __name__ == "__main__":
     TRAIN = False
@@ -37,9 +38,9 @@ if __name__ == "__main__":
     num_epochs = 100
     learning_rate = 3e-4
     decay_rate = 1
-    fraction = 0.5
-    num_samples_train = 10000
-    num_samples_test = 500
+    fraction = 1
+    num_samples_train = 5000
+    num_samples_test = 1000
     output_neurons = 60  # number of neurons in the last layer of MODeepONet
     N_outputs = 6  # number of outputs of MODeepONet
 
@@ -102,7 +103,7 @@ if __name__ == "__main__":
     # Now we need to train/load the DeepONet
     if TRAIN:
         # Train a MODeepONet where both the branch and trunk networks are split
-        multionet_both, loss_both, test_loss_both = train_multionet_visualized(
+        multionet_both, loss_both, test_loss_both = train_multionet_poly_coeff(
             dataloader,
             branch_input_size,
             trunk_input_size,
@@ -137,13 +138,13 @@ if __name__ == "__main__":
                 "fraction": fraction,
                 "num_samples_train": num_samples_train,
                 "num_samples_test": num_samples_test,
-                "train_duration": train_multionet_visualized.duration,
+                "train_duration": train_multionet_poly_coeff.duration,
                 "architecture": "both",
             },
         )
 
         # Train a MODeepONet where only the branch network is split
-        multionet_branch, loss_branch, test_loss_branch = train_multionet_visualized(
+        multionet_branch, loss_branch, test_loss_branch = train_multionet_poly_coeff(
             dataloader,
             branch_input_size,
             trunk_input_size,
@@ -178,12 +179,12 @@ if __name__ == "__main__":
                 "fraction": 1,
                 "num_samples_train": num_samples_train,
                 "num_samples_test": num_samples_test,
-                "train_duration": train_multionet_visualized.duration,
+                "train_duration": train_multionet_poly_coeff.duration,
                 "architecture": "branch",
             },
         )
 
-        multionet_trunk, loss_trunk, test_loss_trunk = train_multionet_visualized(
+        multionet_trunk, loss_trunk, test_loss_trunk = train_multionet_poly_coeff(
             dataloader,
             branch_input_size,
             trunk_input_size,
@@ -217,7 +218,7 @@ if __name__ == "__main__":
                 "fraction": 1,
                 "num_samples_train": num_samples_train,
                 "num_samples_test": num_samples_test,
-                "train_duration": train_multionet_visualized.duration,
+                "train_duration": train_multionet_poly_coeff.duration,
                 "architecture": "trunk",
             },
         )
@@ -272,6 +273,15 @@ if __name__ == "__main__":
             N_outputs,
             architecture="trunk",
         )
+
+    # Print model summaries
+
+    print("------ Model summary: multionet_both ------")
+    summary(multionet_both, input_size=[(32, 31), (32, 1)], depth=1)
+    print("------ Model summary: multionet_branch ------")
+    summary(multionet_branch, input_size=[(32, 31), (32, 1)], depth=1)
+    print("------ Model summary: multionet_trunk ------")
+    summary(multionet_trunk, input_size=[(32, 31), (32, 1)], depth=1)
 
     # Test the different MODeepONets and plot some results
 

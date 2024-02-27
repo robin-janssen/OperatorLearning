@@ -14,8 +14,8 @@ from plotting import (
     plot_losses,
 )
 from training import (
-    train_multionet_visualized,
-    train_multionet_poly_visualized,
+    train_multionet_poly_coeff,
+    train_multionet_poly_values,
     load_multionet,
     test_multionet_poly,
 )
@@ -24,19 +24,19 @@ from training import create_dataloader_2D_frac_coeff
 
 if __name__ == "__main__":
     TRAIN = False
-    VIS = False
-    branch_input_size = 11
-    N_timesteps = 11
+    VIS = True
+    branch_input_size = 21
+    N_timesteps = 21
     trunk_input_size = 1
     hidden_size = 40
     branch_hidden_layers = 3
     trunk_hidden_layers = 3
-    num_epochs = 200
+    num_epochs = 100
     learning_rate = 3e-4
     decay_rate = 1
     fraction = 1
-    num_samples_train = 5000
-    num_samples_test = 500
+    num_samples_train = 2500
+    num_samples_test = 1000
     output_neurons = 60  # number of neurons in the last layer of MODeepONet
     N_outputs = 6  # number of outputs of MODeepONet
 
@@ -99,7 +99,7 @@ if __name__ == "__main__":
     # Now we need to train/load the DeepONet
     if TRAIN:
         # Train a MODeepONet where both the branch and trunk networks are split
-        multionet_coeff, loss_coeff, test_loss_coeff = train_multionet_visualized(
+        multionet_coeff, loss_coeff, test_loss_coeff = train_multionet_poly_coeff(
             dataloader,
             branch_input_size,
             trunk_input_size,
@@ -120,7 +120,7 @@ if __name__ == "__main__":
         # Save the MODeepONet (trained on coefficients)
         save_model(
             multionet_coeff,
-            "multionet_both",
+            "multionet_coeff",
             {
                 "branch_input_size": branch_input_size,
                 "trunk_input_size": trunk_input_size,
@@ -134,13 +134,13 @@ if __name__ == "__main__":
                 "fraction": fraction,
                 "num_samples_train": num_samples_train,
                 "num_samples_test": num_samples_test,
-                "train_duration": train_multionet_visualized.duration,
+                "train_duration": train_multionet_poly_coeff.duration,
                 "architecture": "both",
             },
         )
 
         # Train a MODeepONet where only the branch network is split
-        multionet_poly, loss_poly, test_loss_poly = train_multionet_poly_visualized(
+        multionet_poly, loss_poly, test_loss_poly = train_multionet_poly_values(
             dataloader,
             branch_input_size,
             trunk_input_size,
@@ -175,7 +175,7 @@ if __name__ == "__main__":
                 "fraction": 1,
                 "num_samples_train": num_samples_train,
                 "num_samples_test": num_samples_test,
-                "train_duration": train_multionet_visualized.duration,
+                "train_duration": train_multionet_poly_values.duration,
                 "architecture": "both",
             },
         )
@@ -189,7 +189,7 @@ if __name__ == "__main__":
     else:
         # Load the DeepONet
         multionet_coeff = load_multionet(
-            "models/21-02/multionet_coeff.pth",
+            "models/24-02/multionet_coeff.pth",
             branch_input_size,
             trunk_input_size,
             hidden_size,
@@ -201,7 +201,7 @@ if __name__ == "__main__":
         )
 
         multionet_poly = load_multionet(
-            "models/21-02/multionet_poly.pth",
+            "models/24-02/multionet_poly.pth",
             branch_input_size,
             trunk_input_size,
             hidden_size,
@@ -215,10 +215,11 @@ if __name__ == "__main__":
     # Test the different MODeepONets and plot some results
 
     # First the MODeepONet with both the branch and trunk networks split
-    total_loss, preds_coeff, targets_coeff = test_multionet_poly(
+    coeff_loss, poly_loss, preds_coeff, targets_coeff = test_multionet_poly(
         multionet_coeff, dataloader_test, sensor_locations
     )
-    print(f"Average prediction error (MultiONet coeff): {total_loss:.3E}")
+    print(f"Average polynomial prediction error (MultiONet coeff): {poly_loss:.3E}")
+    print(f"Average coefficient prediction error (MultiONet coeff): {coeff_loss:.3E}")
 
     preds_coeff = preds_coeff.reshape(
         -1, len(test_timesteps), len(sensor_locations)
@@ -238,11 +239,12 @@ if __name__ == "__main__":
 
     # Now the MODeepONet with only the branch network split
 
-    total_loss, preds_poly, targets_poly = test_multionet_poly(
+    coeff_loss, poly_loss, preds_poly, targets_poly = test_multionet_poly(
         multionet_poly, dataloader_test, sensor_locations
     )
 
-    print(f"Average prediction error (Multionet poly): {total_loss:.3E}")
+    print(f"Average polynomial prediction error (Multionet poly): {poly_loss:.3E}")
+    print(f"Average coefficient prediction error (Multionet poly): {coeff_loss:.3E}")
 
     preds_poly = preds_poly.reshape(
         -1, len(test_timesteps), len(sensor_locations)

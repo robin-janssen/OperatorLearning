@@ -370,7 +370,9 @@ def heatmap_plot_errors(
     plt.show()
 
 
-def plot_losses(loss_histories: tuple[np.array, ...], labels: tuple[str, ...]) -> None:
+def plot_losses(
+    loss_histories: tuple[np.array, ...], labels: tuple[str, ...], title: str = "Losses"
+) -> None:
     """
     Plot the loss trajectories for the training of multiple models.
 
@@ -388,7 +390,7 @@ def plot_losses(loss_histories: tuple[np.array, ...], labels: tuple[str, ...]) -
     plt.xlabel("Epoch")
     plt.ylabel("Loss")
     plt.yscale("log")
-    plt.title("Training Loss")
+    plt.title(title)
     plt.legend()
 
     directory = create_date_based_directory(subfolder="plots")
@@ -705,7 +707,7 @@ def streamlit_visualization_history(
                     with cols[2 * i]:
                         pred = predictions[epoch_idx, n]
                         fig, ax = plt.subplots()
-                        ax.imshow(pred, cmap="viridis")
+                        ax.imshow(pred, cmap="viridis", aspect="auto")
                         ax.axis("off")
                         st.pyplot(fig)
 
@@ -714,14 +716,14 @@ def streamlit_visualization_history(
                         gt = ground_truths[n]
                         error = np.abs(pred - gt)
                         fig, ax = plt.subplots()
-                        ax.imshow(error, cmap="viridis", norm=norm)
+                        ax.imshow(error, cmap="viridis", norm=norm, aspect="auto")
                         ax.axis("off")
                         st.pyplot(fig)
 
                 # Display ground truth in the last column
                 with cols[-1]:
                     fig, ax = plt.subplots()
-                    ax.imshow(gt, cmap="viridis")
+                    ax.imshow(gt, cmap="viridis", aspect="auto")
                     ax.axis("off")
                     st.pyplot(fig)
 
@@ -742,3 +744,80 @@ def streamlit_visualization_history(
             st.pyplot(fig)
         else:
             st.write("Predictions will be displayed here once available.")
+
+
+def plot_chemical_examples(
+    data: np.array, names: list[str], num_chemicals: int | None = None
+) -> None:
+    """Creates four exemplary plots, displaying the amount of each chemical over time.
+
+    :param data: 3D numpy array with the chemical data.
+    :param names: List of strings with the names of the chemicals.
+    :param num_chemicals: Number of chemicals to display. If None, all chemicals are displayed.
+    :return: None
+    """
+    if num_chemicals is None:
+        num_chemicals = data.shape[2]
+    plt.subplots(2, 2, figsize=(10, 10))
+    for j in range(4):
+        for i in range(num_chemicals):
+            plt.subplot(2, 2, j + 1)
+            plt.plot(data[j, :, i], label=names[i])
+        plt.xlabel("Timestep")
+        plt.ylabel("Amount")
+        plt.legend()
+    plt.show()
+
+
+def plot_chemicals_comparative(
+    data: np.array, names: list[str], num_examples: int = 10
+) -> None:
+    """Creates four plots, displaying the evolution of four chemicals over time.
+
+    :param data: 3D numpy array with the chemical data.
+    :param names: List of strings with the names of the chemicals.
+    :param num_examples: Number of examples to display for each chemical.
+    """
+    plt.subplots(2, 2, figsize=(10, 10))
+    for j in range(4):
+        plt.subplot(2, 2, j + 1)
+        for i in range(num_examples):
+            plt.plot(data[i, :, 3 * j], label=f"{names[3 * j]}")
+        plt.xlabel("Timestep")
+        plt.ylabel("Amount")
+        plt.legend()
+    plt.show()
+
+
+def plot_chemical_results(
+    predictions: np.ndarray,
+    ground_truth: np.ndarray,
+    names: list[str],
+    num_chemicals: int | None = None,
+) -> None:
+    """
+    Plot the results of the chemical predictions
+
+    :param predictions: 3d numpy array of shape (num_samples, num_timesteps, num_chemicals)
+    :param ground_truth: 3d numpy array of shape (num_samples, num_timesteps, num_chemicals)
+    :param names: list of strings with the chemical names.
+    :param num_chemicals: number of chemicals to plot. None to plot all.
+    """
+    # Generate colors
+    if num_chemicals is None:
+        num_chemicals = predictions.shape[2]
+    c = plt.cm.viridis(np.linspace(0, 1, num_chemicals))
+
+    fig, ax = plt.subplots(2, 2, figsize=(10, 10))
+    plt.suptitle("Chemical predictions")
+    for i in range(4):
+        for j in range(num_chemicals):
+            ax[i % 2, i // 2].plot(
+                predictions[i, :, j], label=f"P {names[j]}", linestyle="--", color=c[j]
+            )
+            ax[i % 2, i // 2].plot(
+                ground_truth[i, :, j], label=f"GT {names[j]}", linestyle="-", color=c[j]
+            )
+            ax[i % 2, i // 2].set_title("Example " + str(i + 1))
+            ax[i % 2, i // 2].legend()
+    plt.show()

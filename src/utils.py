@@ -7,6 +7,7 @@ from datetime import datetime
 import streamlit as st
 import time
 import functools
+import numpy as np
 
 
 def save_model(model, model_name, hyperparameters, subfolder="models"):
@@ -77,3 +78,33 @@ def time_execution(func):
 
     wrapper.duration = None
     return wrapper
+
+
+def load_chemical_data(data_dir, file_extension=".dat", separator=" "):
+    """
+    Load chemical data from a directory containing multiple files.
+
+    :param data_dir: The directory containing the data files.
+    :param file_extension: The file extension of the data files.
+    :return: A list of numpy arrays containing the data from each file.
+    """
+    # Get a list of all relevant files in the directory
+    all_files = os.listdir(data_dir)
+    files = [file for file in all_files if file.endswith(file_extension)]
+    num_files = len(files)
+    files.sort()
+
+    # Load one file to see the data shape
+    data = np.loadtxt(os.path.join(data_dir, files[0]), delimiter=separator)
+    data_shape = data.shape
+
+    # Create an array to store all the data
+    all_data = np.zeros((num_files, *data_shape))
+
+    # Iterate over all the files and load the data
+    for i, file in enumerate(files):
+        if file.endswith(file_extension):
+            data = np.loadtxt(os.path.join(data_dir, file), delimiter=separator)
+            all_data[i] = data
+
+    return all_data

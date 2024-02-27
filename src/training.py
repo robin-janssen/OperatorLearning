@@ -206,7 +206,7 @@ def train_deeponet(
 
 
 @time_execution
-def train_multionet_visualized(
+def train_multionet_poly_coeff(
     data_loader: DataLoader,
     branch_input_size: int,
     trunk_input_size: int,
@@ -224,7 +224,7 @@ def train_multionet_visualized(
     architecture: str = "both",
 ) -> tuple:
     """Train a DeepONet model.
-    The function instantiates a DeepONet model and trains it using the provided DataLoader.
+    The function instantiates a DeepONet model (with multiple outputs) and trains it using the provided DataLoader.
     Note that it assumes equal number of neurons in each hidden layer of the branch and trunk networks.
 
     :param data_loader: A DataLoader object.
@@ -290,7 +290,7 @@ def train_multionet_visualized(
     # output_history = np.zeros((num_epochs, 3, N_outputs, N_timesteps))
     output_history = np.zeros((num_epochs, 3, N_sensors, N_timesteps))
 
-    total_predictions = sum(len(targets) for _, _, targets in data_loader)
+    total_predictions = len(data_loader.dataset)
 
     progress_bar = tqdm(range(num_epochs), desc="Training Progress")
     for epoch in progress_bar:
@@ -355,7 +355,7 @@ def train_multionet_visualized(
 
 
 @time_execution
-def train_multionet_poly_visualized(
+def train_multionet_poly_values(
     data_loader: DataLoader,
     branch_input_size: int,
     trunk_input_size: int,
@@ -373,7 +373,7 @@ def train_multionet_poly_visualized(
     architecture: str = "both",
 ) -> tuple:
     """Train a DeepONet model.
-    The function instantiates a DeepONet model and trains it using the provided DataLoader.
+    The function instantiates a DeepONet model (with multiple outputs) and trains it using the provided DataLoader.
     Note that it assumes equal number of neurons in each hidden layer of the branch and trunk networks.
 
     :param data_loader: A DataLoader object.
@@ -452,31 +452,159 @@ def train_multionet_poly_visualized(
         for branch_inputs, trunk_inputs, targets in data_loader:
             optimizer.zero_grad()
             outputs = deeponet(branch_inputs, trunk_inputs)
+            coeff_loss = criterion(outputs, targets)
             outputs_evaluated = poly_eval_torch(
                 outputs.reshape(-1, outputs.shape[-1]), sensor_locations_tensor
             )
             targets_evaluated = poly_eval_torch(
                 targets.reshape(-1, targets.shape[-1]), sensor_locations_tensor
             )
-            loss = criterion(outputs_evaluated, targets_evaluated)
-            loss.backward()
+            poly_loss = criterion(outputs_evaluated, targets_evaluated)
+            poly_loss.backward()
             optimizer.step()
-            epoch_loss += loss.item()
-        epoch_loss /= total_predictions * N_sensors
+            # epoch_loss += poly_loss.item()
+            epoch_loss += coeff_loss.item()
+        # epoch_loss /= total_predictions * N_sensors
+        epoch_loss /= total_predictions * targets.size(1)
         train_loss_history[epoch] = epoch_loss
         clr = optimizer.param_groups[0]["lr"]
         progress_bar.set_postfix({"loss": epoch_loss, "lr": clr})
         scheduler.step()
         # if epoch % 10 == 0:
         if test_loader is not None:
-            test_loss, outputs, targets = test_multionet_poly(
+            coeff_loss, poly_loss, outputs, targets = test_multionet_poly(
                 deeponet, test_loader, sensor_locations
             )
-            test_loss_history[epoch] = test_loss
+            test_loss_history[epoch] = coeff_loss
             outputs = outputs.reshape(-1, N_timesteps, N_sensors)
             outputs = outputs[:3].transpose(0, 2, 1)
             if epoch == 0:
                 targets = targets.reshape(-1, N_timesteps, N_sensors)[:3]
+                targets_vis = targets.transpose(0, 2, 1)
+            output_history[epoch] = outputs
+        streamlit_visualization_history(
+            train_loss_history[: epoch + 1],
+            test_loss_history[: epoch + 1],
+            output_history,
+            targets_vis,
+            epoch,
+        )
+
+    if test_loader is not None:
+        return deeponet, train_loss_history, test_loss_history
+    else:
+        return deeponet, train_loss_history
+
+
+@time_execution
+def train_multionet_chemical(
+    data_loader: DataLoader,
+    branch_input_size: int,
+    trunk_input_size: int,
+    hidden_size: int,
+    branch_hidden_layers: int = 3,
+    trunk_hidden_layers: int = 3,
+    output_size: int = 100,
+    N_outputs: int = 10,
+    num_epochs: int = 1000,
+    learning_rate: float = 0.001,
+    schedule: bool = True,
+    test_loader: DataLoader = None,
+    N_sensors: int = 101,
+    N_timesteps: int = 101,
+    architecture: str = "both",
+) -> tuple:
+    """Train a DeepONet model.
+    The function instantiates a DeepONet model (with multiple outputs) and trains it using the provided DataLoader.
+    Note that it assumes equal number of neurons in each hidden layer of the branch and trunk networks.
+
+    :param data_loader: A DataLoader object.
+    :param branch_input_size: Input size for the branch network.
+    :param trunk_input_size: Input size for the trunk network.
+    :param hidden_size: Number of hidden units in each layer.
+    :param num_epochs: Number of epochs to train for.
+    :param branch_hidden_layers: Number of hidden layers in the branch network.
+    :param trunk_hidden_layers: Number of hidden layers in the trunk network.
+    :param output_size: Number of neurons in the last layer.
+    :param N_outputs: Number of outputs.
+    :param architecture: Architecture of the MODeepONet model. Can be "branch", "trunk", or "both".
+
+    :return: Trained DeepONet model and loss history.
+    """
+    if architecture == "both":
+        deeponet = MultiONet(
+            branch_input_size,
+            hidden_size,
+            branch_hidden_layers,
+            trunk_input_size,
+            hidden_size,
+            trunk_hidden_layers,
+            output_size,
+            N_outputs,
+        )
+    elif architecture == "branch":
+        deeponet = MultiONetB(
+            branch_input_size,
+            hidden_size,
+            branch_hidden_layers,
+            trunk_input_size,
+            hidden_size,
+            trunk_hidden_layers,
+            output_size,
+            N_outputs,
+        )
+    elif architecture == "trunk":
+        deeponet = MultiONetT(
+            branch_input_size,
+            hidden_size,
+            branch_hidden_layers,
+            trunk_input_size,
+            hidden_size,
+            trunk_hidden_layers,
+            output_size,
+            N_outputs,
+        )
+
+    criterion = nn.MSELoss(reduction="sum")
+    optimizer = optim.Adam(deeponet.parameters(), lr=learning_rate)
+    if schedule:
+        scheduler = optim.lr_scheduler.LinearLR(
+            optimizer, start_factor=1, end_factor=0.1, total_iters=num_epochs
+        )
+    else:
+        scheduler = optim.lr_scheduler.LinearLR(
+            optimizer, start_factor=1, end_factor=1, total_iters=num_epochs
+        )
+
+    train_loss_history = np.zeros(num_epochs)
+    test_loss_history = np.zeros(num_epochs)
+    output_history = np.zeros((num_epochs, 3, N_sensors, N_timesteps))
+
+    total_predictions = len(data_loader.dataset)
+
+    progress_bar = tqdm(range(num_epochs), desc="Training Progress")
+    for epoch in progress_bar:
+        epoch_loss = 0
+        for branch_inputs, trunk_inputs, targets in data_loader:
+            optimizer.zero_grad()
+            outputs = deeponet(branch_inputs, trunk_inputs)
+            loss = criterion(outputs, targets)
+            loss.backward()
+            optimizer.step()
+            epoch_loss += loss.item()
+        epoch_loss /= total_predictions * N_outputs
+        train_loss_history[epoch] = epoch_loss
+        clr = optimizer.param_groups[0]["lr"]
+        progress_bar.set_postfix({"loss": epoch_loss, "lr": clr})
+        scheduler.step()
+        # if epoch % 10 == 0:
+        if test_loader is not None:
+            test_loss, outputs, targets = test_deeponet(deeponet, test_loader)
+            test_loss_history[epoch] = test_loss
+            outputs = outputs.reshape(-1, N_timesteps, N_outputs)[:3]
+            outputs = outputs.transpose(0, 2, 1)
+            if epoch == 0:
+                targets = targets.reshape(-1, N_timesteps, N_outputs)[:3]
                 targets_vis = targets.transpose(0, 2, 1)
             output_history[epoch] = outputs
         streamlit_visualization_history(
@@ -570,7 +698,8 @@ def test_multionet_poly(
         sensor_locations, dtype=torch.float32, device="cpu"
     )  # Assuming model has .device attribute
 
-    total_loss = 0
+    coeff_loss = 0
+    poly_loss = 0
     total_predictions = len(data_loader.dataset)  # Number of total predictions
     # Pre-allocate buffers
     predictions_buffer = np.empty((total_predictions, len(sensor_locations)))
@@ -581,6 +710,8 @@ def test_multionet_poly(
     with torch.no_grad():
         for branch_inputs, trunk_inputs, targets in data_loader:
             outputs = model(branch_inputs, trunk_inputs)
+            loss = criterion(outputs, targets)
+            coeff_loss += loss.item()
 
             # Evaluate the polynomial at the sensor locations for both outputs and targets
             polynomial_values = poly_eval_torch(outputs, sensor_locations_tensor)
@@ -588,7 +719,7 @@ def test_multionet_poly(
 
             # Compute the loss
             loss = criterion(polynomial_values, target_values)
-            total_loss += loss.item()
+            poly_loss += loss.item()
 
             # Store predictions and targets in buffers
             n = branch_inputs.size(0)  # Number of samples in the batch
@@ -601,9 +732,10 @@ def test_multionet_poly(
             buffer_index += n
 
     # Calculate average loss
-    total_loss /= total_predictions * len(sensor_locations)
+    coeff_loss /= total_predictions * targets.size(1)
+    poly_loss /= total_predictions * len(sensor_locations)
 
-    return total_loss, predictions_buffer, targets_buffer
+    return coeff_loss, poly_loss, predictions_buffer, targets_buffer
 
 
 def test_multionet_polynomial_old(
@@ -862,6 +994,50 @@ def create_dataloader_2D_frac(
                         branch_inputs.append(sample[:, 0])
                         trunk_inputs.append([sensor_point, time])
                         targets.append(sample[i, j])
+
+    # Convert to PyTorch tensors
+    branch_inputs_tensor = torch.tensor(np.array(branch_inputs), dtype=torch.float32)
+    trunk_inputs_tensor = torch.tensor(np.array(trunk_inputs), dtype=torch.float32)
+    targets_tensor = torch.tensor(np.array(targets), dtype=torch.float32)
+
+    # Create a TensorDataset and DataLoader
+    dataset = TensorDataset(branch_inputs_tensor, trunk_inputs_tensor, targets_tensor)
+    return DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
+
+
+def create_dataloader_chemicals(
+    data, timesteps, fraction=1, batch_size=32, shuffle=False
+):
+    """
+    Create a DataLoader with optional fractional subsampling for chemical evolution data for DeepONet.
+
+    :param data: 3D numpy array with shape (num_samples, len(timesteps), num_chemicals)
+    :param timesteps: 1D numpy array of timesteps.
+    :param fraction: Fraction of the grid points to sample.
+    :param batch_size: Batch size for the DataLoader.
+    :param shuffle: Whether to shuffle the data.
+    :return: A DataLoader object.
+    """
+    # Create subsampling grid
+
+    branch_inputs = []
+    trunk_inputs = []
+    targets = []
+
+    # Iterate through the grid to select the samples
+    if fraction == 1:
+        for i in range(data.shape[0]):
+            for j in range(data.shape[1]):
+                branch_inputs.append(data[i, 0, :])
+                trunk_inputs.append([timesteps[j]])
+                targets.append(data[i, j, :])
+    else:
+        for i in range(data.shape[0]):
+            for j in range(data.shape[1]):
+                if np.random.uniform(0, 1) < fraction:
+                    branch_inputs.append(data[i, :, 0])
+                    trunk_inputs.append([timesteps[j]])
+                    targets.append(data[i, :, j])
 
     # Convert to PyTorch tensors
     branch_inputs_tensor = torch.tensor(np.array(branch_inputs), dtype=torch.float32)
