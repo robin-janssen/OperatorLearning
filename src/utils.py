@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from typing import Type
 import torch
 import yaml
 from datetime import datetime
@@ -9,8 +10,18 @@ import time
 import functools
 import numpy as np
 
+from deeponet import DeepONet, MultiONet, MultiONetB, MultiONetT
 
-def save_model(model, model_name, hyperparameters, subfolder="models"):
+
+# TODO complete type hints
+def save_model(
+    model: Type[DeepONet | MultiONet],
+    model_name,
+    hyperparameters,
+    subfolder="models",
+    train_loss: np.ndarray | None = None,
+    test_loss: np.ndarray | None = None,
+):
     """
     Save the trained model and hyperparameters.
 
@@ -26,11 +37,23 @@ def save_model(model, model_name, hyperparameters, subfolder="models"):
     torch.save(model.state_dict(), model_path)
 
     # Save hyperparameters as a YAML file
-    hyperparameters_path = os.path.join(model_dir, f"{model_name}_config.yaml")
+    hyperparameters_path = os.path.join(model_dir, f"{model_name}.yaml")
     with open(hyperparameters_path, "w") as file:
         yaml.dump(hyperparameters, file)
 
-    print(f"Model and hyperparameters saved to {model_dir}")
+    if train_loss is not None and test_loss is not None:
+        # Save the losses as a numpy file
+        losses_path = os.path.join(model_dir, f"{model_name}_losses.npz")
+        np.savez(losses_path, train_loss=train_loss, test_loss=test_loss)
+
+    print(f"Model, losses and hyperparameters saved to {model_dir}")
+
+
+def read_yaml_config(model_path):
+    config_path = model_path.replace(".pth", ".yaml")
+    with open(config_path, "r") as file:
+        config = yaml.safe_load(file)
+    return config
 
 
 def create_date_based_directory(base_dir=".", subfolder="models"):
@@ -42,7 +65,7 @@ def create_date_based_directory(base_dir=".", subfolder="models"):
     :return: The path of the created date-based directory within the specified subfolder.
     """
     # Get the current date in dd-mm format
-    current_date = datetime.now().strftime("%d-%m")
+    current_date = datetime.now().strftime("%m-%d")
     full_path = os.path.join(base_dir, subfolder, current_date)
 
     # Check if the directory exists, and create it if it doesn't
@@ -50,6 +73,21 @@ def create_date_based_directory(base_dir=".", subfolder="models"):
         os.makedirs(full_path)
 
     return full_path
+
+
+def save_plot_counter(filename, directory="plots"):
+    # Initialize filename and counter
+    filepath = os.path.join(directory, filename)
+    filebase, fileext = filename.split(".")
+    counter = 1
+
+    # Check if the file exists and modify the filename accordingly
+    while os.path.exists(filepath):
+        filename = f"{filebase}_{counter}.{fileext}"
+        filepath = os.path.join(directory, filename)
+        counter += 1
+
+    return filepath
 
 
 def get_or_create_placeholder(key):
@@ -108,3 +146,65 @@ def load_chemical_data(data_dir, file_extension=".dat", separator=" "):
             all_data[i] = data
 
     return all_data
+
+
+def make_multionet(
+    branch_input_size,
+    branch_hidden_size,
+    branch_hidden_layers,
+    trunk_input_size,
+    trunk_hidden_size,
+    trunk_hidden_layers,
+    output_size,
+    N_outputs,
+    architecture,
+):
+    """
+    Load a MultiONet model based on the specified architecture.
+
+    :param architecture: The architecture of the MultiONet model.
+    :param branch_input_size: The number of input neurons for the branch network.
+    :param hidden_size: The number of neurons in the hidden layers.
+    :param branch_hidden_layers: The number of hidden layers in the branch network.
+    :param trunk_input_size: The number of input neurons for the trunk network.
+    :param hidden_size: The number of neurons in the hidden layers.
+    :param trunk_hidden_layers: The number of hidden layers in the trunk network.
+    :param output_size: The number of output neurons.
+    :param N_outputs: The number of outputs.
+    :param device: The device to use for the model.
+    :return: The MultiONet model.
+    """
+    if architecture == "both":
+        deeponet = MultiONet(
+            branch_input_size,
+            branch_hidden_size,
+            branch_hidden_layers,
+            trunk_input_size,
+            trunk_hidden_size,
+            trunk_hidden_layers,
+            output_size,
+            N_outputs,
+        )
+    elif architecture == "branch":
+        deeponet = MultiONetB(
+            branch_input_size,
+            branch_hidden_size,
+            branch_hidden_layers,
+            trunk_input_size,
+            trunk_hidden_size,
+            trunk_hidden_layers,
+            output_size,
+            N_outputs,
+        )
+    elif architecture == "trunk":
+        deeponet = MultiONetT(
+            branch_input_size,
+            branch_hidden_size,
+            branch_hidden_layers,
+            trunk_input_size,
+            trunk_hidden_size,
+            trunk_hidden_layers,
+            output_size,
+            N_outputs,
+        )
+    return deeponet

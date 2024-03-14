@@ -101,7 +101,7 @@ if __name__ == "__main__":
 
     plot_data = np.array([fct for fct, _, _ in data])
     # Now we need to plot some of the data
-    plot_functions_only(plot_data, sensor_points, 300)
+    plot_functions_only(plot_data[:, :, None], sensor_points, 300)
     # plot_functions_only(np.array(data_coeff), sensor_points, 300)
 
     # Define two DeepONets, one for each dataset
@@ -173,7 +173,7 @@ if __name__ == "__main__":
 
     else:
         deeponet = load_deeponet(
-            "models/06-02/deeponet_restricted.pth",
+            "models/02-06/deeponet_restricted.pth",
             101,
             trunk_input_size,
             hidden_size,
@@ -181,7 +181,7 @@ if __name__ == "__main__":
             trunk_hidden_layers,
         )
         deeponet_coeff = load_deeponet(
-            "models/06-02/deeponet_restricted_coeff.pth",
+            "models/02-06/deeponet_restricted_coeff.pth",
             6,
             trunk_input_size,
             hidden_size,

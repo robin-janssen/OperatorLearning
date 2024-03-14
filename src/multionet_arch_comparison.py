@@ -28,7 +28,7 @@ from torchinfo import summary
 
 if __name__ == "__main__":
     TRAIN = False
-    VIS = False
+    VIS = True
     branch_input_size = 31
     N_timesteps = 31
     trunk_input_size = 1
@@ -239,7 +239,7 @@ if __name__ == "__main__":
     else:
         # Load the DeepONet
         multionet_both = load_multionet(
-            "models/21-02/multionet_both.pth",
+            "models/02-21/multionet_both.pth",
             branch_input_size,
             trunk_input_size,
             hidden_size,
@@ -251,7 +251,7 @@ if __name__ == "__main__":
         )
 
         multionet_branch = load_multionet(
-            "models/21-02/multionet_branch.pth",
+            "models/02-21/multionet_branch.pth",
             branch_input_size,
             trunk_input_size,
             hidden_size,
@@ -263,7 +263,7 @@ if __name__ == "__main__":
         )
 
         multionet_trunk = load_multionet(
-            "models/21-02/multionet_trunk.pth",
+            "models/02-21/multionet_trunk.pth",
             branch_input_size,
             trunk_input_size,
             hidden_size,
