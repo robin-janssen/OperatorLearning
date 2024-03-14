@@ -4,10 +4,9 @@ import numpy as np
 
 # from datagen import generate_decaying_sines, surface_plot
 from datagen import generate_oscillating_sines
-from plotting import heatmap_plot, plot_functions_only, surface_plot
+from plotting import heatmap_plot, plot_functions_only, surface_plot, plot_losses
 from training import (
     train_deeponet,
-    plot_losses,
     load_deeponet,
     test_deeponet,
     create_dataloader_2D_frac,

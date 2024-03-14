@@ -4,19 +4,18 @@ import numpy as np
 
 # from datagen import generate_decaying_sines, surface_plot
 from datagen import generate_evolving_spectra
-from plotting import plot_functions_only, heatmap_plot, surface_plot
+from plotting import plot_functions_only, heatmap_plot, surface_plot, plot_losses
 from training import (
     train_deeponet_visualized,
-    plot_losses,
     load_deeponet,
     test_deeponet,
 )
-from deeponet_time_dependent import create_dataloader_2D_frac
+from training import create_dataloader_2D_frac
 from utils import save_model
 
 if __name__ == "__main__":
-    TRAIN = True
-    branch_input_size = 12
+    TRAIN = False
+    branch_input_size = 22
     trunk_input_size = 2
     hidden_size = 40
     branch_hidden_layers = 3
@@ -172,7 +171,7 @@ if __name__ == "__main__":
     else:
         # Load the DeepONet
         param_deeponet = load_deeponet(
-            "models/06-02/deeponet_spectrum_param.pth",
+            "models/02-06/deeponet_spectrum_param.pth",
             branch_input_size,
             trunk_input_size,
             hidden_size,
@@ -180,7 +179,7 @@ if __name__ == "__main__":
             trunk_hidden_layers,
         )
         no_param_deeponet = load_deeponet(
-            "models/06-02/deeponet_spectrum_no_param.pth",
+            "models/02-06/deeponet_spectrum_no_param.pth",
             branch_input_size - 1,
             trunk_input_size,
             hidden_size,
@@ -189,9 +188,11 @@ if __name__ == "__main__":
         )
 
     # Test the DeepONet
-    param_loss, param_predictions = test_deeponet(param_deeponet, dataloader_test_param)
+    param_loss, param_predictions, _ = test_deeponet(
+        param_deeponet, dataloader_test_param
+    )
     print(f"Total loss with parameter: {param_loss:.3E}")
-    no_param_loss, no_param_predictions = test_deeponet(
+    no_param_loss, no_param_predictions, _ = test_deeponet(
         no_param_deeponet, dataloader_test_no_param
     )
     print(f"Total loss without parameter: {no_param_loss:.3E}")

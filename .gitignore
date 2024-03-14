@@ -144,4 +144,6 @@ plots/
 .DS_Store
 scripts/
 .vscode/
+data/
+optuna/
 
