@@ -4,7 +4,6 @@ import os
 import yaml
 from datetime import datetime
 import streamlit as st
-import numpy as np
 
 
 # TODO complete type hints
@@ -58,37 +57,6 @@ def get_or_create_placeholder(key):
             placeholder = st.empty()
             st.session_state[key] = placeholder
     return st.session_state[key]
-
-
-def load_chemical_data(data_folder, file_extension=".dat", separator=" "):
-    """
-    Load chemical data from a directory containing multiple files.
-
-    :param data_folder: The directory containing the data files.
-    :param file_extension: The file extension of the data files.
-    :return: A list of numpy arrays containing the data from each file.
-    """
-    # Get a list of all relevant files in the directory
-    dataset_path = get_project_path(data_folder)
-    all_files = os.listdir(dataset_path)
-    files = [file for file in all_files if file.endswith(file_extension)]
-    num_files = len(files)
-    files.sort()
-
-    # Load one file to see the data shape
-    data = np.loadtxt(os.path.join(dataset_path, files[0]), delimiter=separator)
-    data_shape = data.shape
-
-    # Create an array to store all the data
-    all_data = np.zeros((num_files, *data_shape))
-
-    # Iterate over all the files and load the data
-    for i, file in enumerate(files):
-        if file.endswith(file_extension):
-            data = np.loadtxt(os.path.join(dataset_path, file), delimiter=separator)
-            all_data[i] = data
-
-    return all_data
 
 
 def get_project_path(relative_path):

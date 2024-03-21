@@ -4,7 +4,7 @@ import numpy as np
 
 # from torchinfo import summary
 
-from data import chemicals
+from data import chemicals, create_dataloader_chemicals, load_chemical_data
 from plotting import (
     plot_chemical_examples,
     plot_chemicals_comparative,
@@ -14,18 +14,17 @@ from plotting import (
     plot_relative_errors_over_time,
 )
 from training import (
-    create_dataloader_chemicals,
     train_multionet_chemical,
     test_deeponet,
     load_multionet,
+    save_model,
 )
-from training import save_model, load_chemical_data, read_yaml_config
+from utils import read_yaml_config
 
 
-if __name__ == "__main__":
-
-    TRAIN = True
-    VIS = False
+def run(args):
+    TRAIN = args.train
+    VIS = args.vis
     USE_MASS_CONSERVATION = True
     pretrained_model_path = None  # "models/03-02/multionet_chemical_500_400e.pth"
     branch_input_size = 29
@@ -78,8 +77,6 @@ if __name__ == "__main__":
     dataloader_test = create_dataloader_chemicals(
         test_data, timesteps, fraction=1, batch_size=32, shuffle=False
     )
-
-    data_example = next(iter(dataloader_train))
 
     if TRAIN:
         multionet, train_loss, test_loss = train_multionet_chemical(
@@ -185,7 +182,11 @@ if __name__ == "__main__":
 
     # Plot the results
     plot_chemical_results(
-        predictions, ground_truth, extracted_chemicals, num_chemicals=10
+        predictions,
+        ground_truth,
+        extracted_chemicals,
+        "MultiONet for Chemicals",
+        num_chemicals=10,
     )
 
     # Plot the errors

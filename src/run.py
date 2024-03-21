@@ -25,13 +25,16 @@ if __name__ == "__main__":
     parser.add_argument(
         "--script",
         type=str,
-        default="multionet_scripts.multionet_chemical_comparison_2.run",
+        default="multionet_scripts.multionet_chemical_tests.run",  # "multionet_scripts.multionet_chemical_comparison_2.run",
         help="Path to the script to run, e.g., 'deeponet_scripts.deeponet_training.run'",
     )
 
     # Arguments for the script example provided
     parser.add_argument(
-        "--train", action="store_true", help="Whether to train the model."
+        "--train",
+        action="store_true",
+        default=True,
+        help="Whether to train the model.",
     )
     parser.add_argument(
         "--vis", action="store_true", default=False, help="Whether to visualize data."
@@ -39,6 +42,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--use_mass_conservation",
         action="store_true",
+        default=False,
         help="Use mass conservation in the loss function.",
     )
     parser.add_argument(

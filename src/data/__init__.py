@@ -1,4 +1,4 @@
-from .chemicals import chemicals, masses
+from .osu_chemicals import chemicals, masses, load_chemical_data
 from .data_utils import rbf_kernel, numerical_integration
 from .datagen import (
     generate_polynomial_data,
@@ -26,6 +26,7 @@ from .dataloader import (
 __all__ = [
     "chemicals",
     "masses",
+    "load_chemical_data",
     "rbf_kernel",
     "numerical_integration",
     "generate_polynomial_data",
