@@ -1,13 +1,13 @@
 import numpy as np
 import torch
 
-from datagen import generate_GRF_data, generate_polynomial_data, generate_sine_data
+from data import generate_GRF_data, generate_polynomial_data, generate_sine_data
 from training import (
     train_deeponet,
     load_deeponet,
     test_deeponet,
-    create_dataloader,
 )
+from data import create_dataloader
 from plotting import plot_results, plot_losses
 
 

@@ -1,3 +1,6 @@
+# This script is used to optimize the hyperparameters of the multionet_chemical model using optuna.
+# The results of the optimization are stored in optuna/multionet_chemical_fine.db
+
 import optuna
 from optuna.visualization import (
     plot_param_importances,

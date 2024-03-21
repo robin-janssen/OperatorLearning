@@ -1,11 +1,15 @@
-# This script compares two training approaches for MultiONet.
-# The first approach calculates the loss based on the coefficients of the polynomial functions.
-# The second approach calculates the loss based on the polynomial functions themselves. To do so, the coefficients are evaluated at the sensor locations and the loss is calculated based on the resulting values.
+# This script compares different architectures for the MODeepONet. The architectures are:
+# - Both the branch and trunk networks are split
+# - Only the branch network is split
+# - Only the trunk network is split
+# The script generates decaying polynomials and trains the different MODeepONets on the data. The trained MODeepONets are then tested and the results are plotted.
+
+# Currently, it seems that splitting only the trunk network is the best option (best performance at equal training time).
 
 import numpy as np
 
-# from datagen import generate_decaying_sines, surface_plot
-from datagen import generate_decaying_polynomials
+# from data import generate_decaying_sines, surface_plot
+from data import generate_decaying_polynomials
 from plotting import (
     heatmap_plot,
     heatmap_plot_errors,
@@ -15,18 +19,18 @@ from plotting import (
 )
 from training import (
     train_multionet_poly_coeff,
-    train_multionet_poly_values,
     load_multionet,
-    test_multionet_poly,
+    test_multionet_polynomial_old,
 )
-from utils import save_model
-from training import create_dataloader_2D_frac_coeff
+from training import save_model
+from data import create_dataloader_2D_frac_coeff
+from torchinfo import summary
 
 if __name__ == "__main__":
     TRAIN = False
     VIS = True
-    branch_input_size = 21
-    N_timesteps = 21
+    branch_input_size = 31
+    N_timesteps = 31
     trunk_input_size = 1
     hidden_size = 40
     branch_hidden_layers = 3
@@ -35,7 +39,7 @@ if __name__ == "__main__":
     learning_rate = 3e-4
     decay_rate = 1
     fraction = 1
-    num_samples_train = 2500
+    num_samples_train = 5000
     num_samples_test = 1000
     output_neurons = 60  # number of neurons in the last layer of MODeepONet
     N_outputs = 6  # number of outputs of MODeepONet
@@ -80,7 +84,7 @@ if __name__ == "__main__":
         sensor_locations,
         train_timesteps,
         batch_size=32,
-        shuffle=True,
+        shuffle=False,
         fraction=fraction,
     )
 
@@ -99,7 +103,7 @@ if __name__ == "__main__":
     # Now we need to train/load the DeepONet
     if TRAIN:
         # Train a MODeepONet where both the branch and trunk networks are split
-        multionet_coeff, loss_coeff, test_loss_coeff = train_multionet_poly_coeff(
+        multionet_both, loss_both, test_loss_both = train_multionet_poly_coeff(
             dataloader,
             branch_input_size,
             trunk_input_size,
@@ -117,10 +121,10 @@ if __name__ == "__main__":
             architecture="both",
         )
 
-        # Save the MODeepONet (trained on coefficients)
+        # Save the trained DeepONet
         save_model(
-            multionet_coeff,
-            "multionet_coeff",
+            multionet_both,
+            "multionet_both",
             {
                 "branch_input_size": branch_input_size,
                 "trunk_input_size": trunk_input_size,
@@ -140,7 +144,7 @@ if __name__ == "__main__":
         )
 
         # Train a MODeepONet where only the branch network is split
-        multionet_poly, loss_poly, test_loss_poly = train_multionet_poly_values(
+        multionet_branch, loss_branch, test_loss_branch = train_multionet_poly_coeff(
             dataloader,
             branch_input_size,
             trunk_input_size,
@@ -151,17 +155,56 @@ if __name__ == "__main__":
             N_outputs,
             num_epochs,
             learning_rate,
-            schedule=False,
             test_loader=dataloader_test,
-            sensor_locations=sensor_locations,
+            N_sensors=branch_input_size,
             N_timesteps=N_timesteps,
-            architecture="both",
+            schedule=False,
+            architecture="branch",
         )
 
-        # Save the MODeepONet (trained on polynomials)
+        # Save the trained MODeepONet
         save_model(
-            multionet_poly,
-            "multionet_poly",
+            multionet_branch,
+            "multionet_branch",
+            {
+                "branch_input_size": branch_input_size,
+                "trunk_input_size": trunk_input_size,
+                "hidden_size": hidden_size,
+                "branch_hidden_layers": branch_hidden_layers,
+                "trunk_hidden_layers": trunk_hidden_layers,
+                "" "num_epochs": num_epochs,
+                "learning_rate": learning_rate,
+                "N_timesteps": N_timesteps,
+                "decay_rate": decay_rate,
+                "fraction": 1,
+                "num_samples_train": num_samples_train,
+                "num_samples_test": num_samples_test,
+                "train_duration": train_multionet_poly_coeff.duration,
+                "architecture": "branch",
+            },
+        )
+
+        multionet_trunk, loss_trunk, test_loss_trunk = train_multionet_poly_coeff(
+            dataloader,
+            branch_input_size,
+            trunk_input_size,
+            hidden_size,
+            branch_hidden_layers,
+            trunk_hidden_layers,
+            output_neurons,
+            N_outputs,
+            num_epochs,
+            learning_rate,
+            test_loader=dataloader_test,
+            N_sensors=branch_input_size,
+            N_timesteps=N_timesteps,
+            schedule=False,
+            architecture="trunk",
+        )
+
+        save_model(
+            multionet_trunk,
+            "multionet_trunk",
             {
                 "branch_input_size": branch_input_size,
                 "trunk_input_size": trunk_input_size,
@@ -175,21 +218,28 @@ if __name__ == "__main__":
                 "fraction": 1,
                 "num_samples_train": num_samples_train,
                 "num_samples_test": num_samples_test,
-                "train_duration": train_multionet_poly_values.duration,
-                "architecture": "both",
+                "train_duration": train_multionet_poly_coeff.duration,
+                "architecture": "trunk",
             },
         )
 
         # Plot the losses (and save the plot)
         plot_losses(
-            (loss_coeff, test_loss_coeff, loss_poly, test_loss_poly),
-            ("Train (coeff)", "Test (coeff)", "Train (poly)", "Test (poly)"),
+            (
+                loss_both,
+                test_loss_both,
+                loss_branch,
+                test_loss_branch,
+                loss_trunk,
+                test_loss_trunk,
+            ),
+            ("Both", "Both Test", "Branch", "Branch Test", "Trunk", "Trunk Test"),
         )
 
     else:
         # Load the DeepONet
-        multionet_coeff = load_multionet(
-            "models/24-02/multionet_coeff.pth",
+        multionet_both = load_multionet(
+            "models/02-21/multionet_both.pth",
             branch_input_size,
             trunk_input_size,
             hidden_size,
@@ -200,8 +250,8 @@ if __name__ == "__main__":
             architecture="both",
         )
 
-        multionet_poly = load_multionet(
-            "models/24-02/multionet_poly.pth",
+        multionet_branch = load_multionet(
+            "models/02-21/multionet_branch.pth",
             branch_input_size,
             trunk_input_size,
             hidden_size,
@@ -209,64 +259,108 @@ if __name__ == "__main__":
             trunk_hidden_layers,
             output_neurons,
             N_outputs,
-            architecture="both",
+            architecture="branch",
         )
+
+        multionet_trunk = load_multionet(
+            "models/02-21/multionet_trunk.pth",
+            branch_input_size,
+            trunk_input_size,
+            hidden_size,
+            branch_hidden_layers,
+            trunk_hidden_layers,
+            output_neurons,
+            N_outputs,
+            architecture="trunk",
+        )
+
+    # Print model summaries
+
+    print("------ Model summary: multionet_both ------")
+    summary(multionet_both, input_size=[(32, 31), (32, 1)], depth=1)
+    print("------ Model summary: multionet_branch ------")
+    summary(multionet_branch, input_size=[(32, 31), (32, 1)], depth=1)
+    print("------ Model summary: multionet_trunk ------")
+    summary(multionet_trunk, input_size=[(32, 31), (32, 1)], depth=1)
 
     # Test the different MODeepONets and plot some results
 
     # First the MODeepONet with both the branch and trunk networks split
-    coeff_loss, poly_loss, preds_coeff, targets_coeff = test_multionet_poly(
-        multionet_coeff, dataloader_test, sensor_locations
+    total_loss, preds_both, targets_both = test_multionet_polynomial_old(
+        multionet_both, dataloader_test, sensor_locations
     )
-    print(f"Average polynomial prediction error (MultiONet coeff): {poly_loss:.3E}")
-    print(f"Average coefficient prediction error (MultiONet coeff): {coeff_loss:.3E}")
+    print(f"Average prediction error (Multionet both): {total_loss:.3E}")
 
-    preds_coeff = preds_coeff.reshape(
-        -1, len(test_timesteps), len(sensor_locations)
+    preds_both = preds_both.reshape(
+        -1, len(sensor_locations), len(test_timesteps)
     ).transpose(0, 2, 1)
-    targets_coeff = targets_coeff.reshape(
-        -1, len(test_timesteps), len(sensor_locations)
+    targets_both = targets_both.reshape(
+        -1, len(sensor_locations), len(test_timesteps)
     ).transpose(0, 2, 1)
 
     heatmap_plot(
         sensor_locations,
         test_timesteps,
-        targets_coeff,
+        targets_both,
         5,
-        preds_coeff,
+        preds_both,
         title="MultiONet (both) results",
     )
 
     # Now the MODeepONet with only the branch network split
 
-    coeff_loss, poly_loss, preds_poly, targets_poly = test_multionet_poly(
-        multionet_poly, dataloader_test, sensor_locations
+    total_loss, preds_branch, targets_branch = test_multionet_polynomial_old(
+        multionet_branch, dataloader_test, sensor_locations
     )
 
-    print(f"Average polynomial prediction error (Multionet poly): {poly_loss:.3E}")
-    print(f"Average coefficient prediction error (Multionet poly): {coeff_loss:.3E}")
+    print(f"Average prediction error (Multionet branch): {total_loss:.3E}")
 
-    preds_poly = preds_poly.reshape(
-        -1, len(test_timesteps), len(sensor_locations)
+    preds_branch = preds_branch.reshape(
+        -1, len(sensor_locations), len(test_timesteps)
     ).transpose(0, 2, 1)
-    targets_poly = targets_poly.reshape(
-        -1, len(test_timesteps), len(sensor_locations)
+    targets_branch = targets_branch.reshape(
+        -1, len(sensor_locations), len(test_timesteps)
     ).transpose(0, 2, 1)
 
     heatmap_plot(
         sensor_locations,
         test_timesteps,
-        targets_poly,
+        targets_branch,
         5,
-        preds_poly,
+        preds_branch,
         title="MultiONet (branch) results",
+    )
+
+    # Finally the MODeepONet with only the trunk network split
+
+    total_loss, preds_trunk, targets_trunk = test_multionet_polynomial_old(
+        multionet_trunk, dataloader_test, sensor_locations
+    )
+
+    print(f"Average prediction error (Multionet trunk): {total_loss:.3E}")
+
+    preds_trunk = preds_trunk.reshape(
+        -1, len(sensor_locations), len(test_timesteps)
+    ).transpose(0, 2, 1)
+    targets_trunk = targets_trunk.reshape(
+        -1, len(sensor_locations), len(test_timesteps)
+    ).transpose(0, 2, 1)
+
+    heatmap_plot(
+        sensor_locations,
+        test_timesteps,
+        targets_trunk,
+        5,
+        preds_trunk,
+        title="MultiONet (trunk) results",
     )
 
     # Compare the model errors
 
     errors = []
-    errors.append(np.abs(preds_coeff - targets_coeff))
-    errors.append(np.abs(preds_poly - targets_poly))
+    errors.append(np.abs(preds_both - targets_both))
+    errors.append(np.abs(preds_branch - targets_branch))
+    errors.append(np.abs(preds_trunk - targets_trunk))
 
     heatmap_plot_errors(
         sensor_locations,

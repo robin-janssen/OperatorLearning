@@ -1,8 +1,10 @@
+# This script is used to train a MultiONet for the chemical dataset and visualize the results.
+
 import numpy as np
 
 # from torchinfo import summary
 
-from chemicals import chemicals
+from data import chemicals
 from plotting import (
     plot_chemical_examples,
     plot_chemicals_comparative,
@@ -17,7 +19,7 @@ from training import (
     test_deeponet,
     load_multionet,
 )
-from utils import save_model, load_chemical_data, read_yaml_config
+from training import save_model, load_chemical_data, read_yaml_config
 
 
 if __name__ == "__main__":
@@ -42,7 +44,7 @@ if __name__ == "__main__":
     massloss_factor = 0.013
 
     if USE_MASS_CONSERVATION:
-        from chemicals import masses
+        from data import masses
     else:
         masses = None
 

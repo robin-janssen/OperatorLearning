@@ -916,7 +916,7 @@ def plot_chemical_results(
     plt.show()
 
 
-def plot_chemiocal_results_and_errors(
+def plot_chemical_results_and_errors(
     predictions: np.ndarray | tuple[np.ndarray, ...],
     ground_truth: np.ndarray,
     names: list[str],
@@ -1044,19 +1044,19 @@ def plot_relative_errors_over_time(
         label="99th Percentile",
     )
 
-    plt.ylim(1e-5, 1)
+    # plt.ylim(1e-5, 1)
     plt.yscale("log")
     plt.xlabel("Timestep")
     plt.ylabel("Relative Error (Log Scale)")
     plt.title(title)
     plt.legend()
 
-    filename = "relative_errors.png"
-    directory = create_date_based_directory(subfolder="plots")
-    filepath = save_plot_counter(filename, directory)
     if save:
+        filename = "relative_errors.png"
+        directory = create_date_based_directory(subfolder="plots")
+        filepath = save_plot_counter(filename, directory)
         plt.savefig(filepath)
-    print(f"Plot saved as: {filepath}")
+        print(f"Plot saved as: {filepath}")
 
     plt.show()
 
@@ -1076,4 +1076,25 @@ def plot_chemical_errors(
     plt.yscale("log")
     plt.legend()
     plt.title(title)
+    plt.show()
+
+
+def plot_mass_conservation(ground_truth, masses, num_examples=5):
+    # Ensure masses is a numpy array to utilize broadcasting
+    masses = np.array(masses)
+
+    plt.figure(figsize=(12, 8))
+
+    # Calculate and plot the total mass for a selection of examples
+    for i in range(num_examples):
+        # Calculate the total mass for each timestep
+        total_mass = np.sum(ground_truth[i] * masses, axis=1)  # Sum over chemicals
+
+        # Plot
+        plt.plot(total_mass, label=f"Example {i+1}")
+
+    plt.xlabel("Timestep")
+    plt.ylabel("Total Mass")
+    plt.title("Total Mass Conservation Over Time")
+    plt.legend()
     plt.show()

@@ -1,23 +1,21 @@
-import numpy as np
-from torchinfo import summary
+# Compare the performance of two MultiONets for the chemical dataset
+# The first MultiONet was trained with the inital manual settings, while the second MultiONet was trained with a fine-tuned architecture and hyperparameters.
 
-from chemicals import chemicals
+import numpy as np
+
+from data import chemicals
 from plotting import (
     plot_chemical_examples,
     plot_chemicals_comparative,
-    plot_losses,
-    plot_chemical_results,
     plot_chemical_errors,
     plot_relative_errors_over_time,
-    plot_functions_only,
 )
 from training import (
     create_dataloader_chemicals,
-    train_multionet_chemical,
     test_deeponet,
     load_multionet,
 )
-from utils import save_model, load_chemical_data, read_yaml_config
+from utils import load_chemical_data
 
 
 if __name__ == "__main__":
@@ -40,7 +38,7 @@ if __name__ == "__main__":
     device = "mps"  # "cpu", "mps"
 
     if USE_MASS_CONSERVATION:
-        from chemicals import masses
+        from data import masses
     else:
         masses = None
 

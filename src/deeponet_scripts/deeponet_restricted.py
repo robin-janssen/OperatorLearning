@@ -4,11 +4,10 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from datagen import generate_polynomial_data_coeff
+from data import generate_polynomial_data_coeff
 from plotting import plot_functions_only, plot_losses, plot_results
-from training import train_deeponet, load_deeponet
-from utils import save_model
-from training import create_dataloader_modified
+from training import train_deeponet, load_deeponet, save_model
+from data import create_dataloader_modified
 
 
 def test_deeponet_coeff(model, data_loader, sensor_points=[], order=5, coeff=False):

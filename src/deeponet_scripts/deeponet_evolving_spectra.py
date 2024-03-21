@@ -2,16 +2,16 @@
 # But here, the time-dependent data are fake spectra.
 import numpy as np
 
-# from datagen import generate_decaying_sines, surface_plot
-from datagen import generate_evolving_spectra
+# from data import generate_decaying_sines, surface_plot
+from data import generate_evolving_spectra
 from plotting import plot_functions_only, heatmap_plot, surface_plot, plot_losses
 from training import (
     train_deeponet_visualized,
     load_deeponet,
     test_deeponet,
 )
-from training import create_dataloader_2D_frac
-from utils import save_model
+from data import create_dataloader_2D_frac
+from training import save_model
 
 if __name__ == "__main__":
     TRAIN = False

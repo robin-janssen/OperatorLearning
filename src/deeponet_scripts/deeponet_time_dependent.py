@@ -2,8 +2,8 @@
 
 import numpy as np
 
-# from datagen import generate_decaying_sines, surface_plot
-from datagen import generate_oscillating_sines
+# from data import generate_decaying_sines, surface_plot
+from data import generate_oscillating_sines
 from plotting import heatmap_plot, plot_functions_only, surface_plot, plot_losses
 from training import (
     train_deeponet,
@@ -11,7 +11,7 @@ from training import (
     test_deeponet,
     create_dataloader_2D_frac,
 )
-from utils import save_model
+from training import save_model
 
 
 if __name__ == "__main__":

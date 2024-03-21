@@ -7,25 +7,31 @@ import numpy as np
 # from torch.utils.data import DataLoader, TensorDataset
 # import matplotlib.pyplot as plt
 
-# from datagen import generate_decaying_sines, surface_plot
-from datagen import generate_decaying_polynomials
-from plotting import heatmap_plot, plot_functions_only, surface_plot, plot_losses
+# from data import generate_decaying_sines, surface_plot
+from data import generate_decaying_polynomials
+from plotting import (
+    heatmap_plot,
+    plot_functions_only,
+    surface_plot,
+    plot_losses,
+    plot_relative_errors_over_time,
+)
 from training import (
     train_deeponet_visualized,
-    train_multionet_visualized,
+    train_multionet_poly_coeff,
     load_deeponet,
     load_multionet,
     test_deeponet,
-    test_multionet_polynomial,
+    test_multionet_poly,
 )
-from utils import save_model
+from training import save_model
 from training import (
     create_dataloader_2D_frac,
     create_dataloader_2D_frac_coeff,
 )
 
 if __name__ == "__main__":
-    TRAIN = True
+    TRAIN = False
     branch_input_size = 81
     N_timesteps = 16
     trunk_input_size = 2
@@ -169,7 +175,7 @@ if __name__ == "__main__":
         )
 
         # Train a MODeepONet
-        multiple_deeponet, m_loss, m_test_loss = train_multionet_visualized(
+        multiple_deeponet, m_loss, m_test_loss = train_multionet_poly_coeff(
             dataloader_multi,
             branch_input_size,
             trunk_input_size - 1,
@@ -203,7 +209,7 @@ if __name__ == "__main__":
                 "fraction": 1,
                 "num_samples_train": num_samples_train * 5,
                 "num_samples_test": num_samples_test,
-                "train_duration": train_multionet_visualized.duration,
+                "train_duration": train_multionet_poly_coeff.duration,
             },
         )
 
@@ -221,7 +227,7 @@ if __name__ == "__main__":
     else:
         # Load the DeepONet
         vanilla_deeponet = load_deeponet(
-            "models/19-02/singleonet.pth",
+            "models/02-19/singleonet.pth",
             branch_input_size,
             trunk_input_size,
             hidden_size,
@@ -230,7 +236,7 @@ if __name__ == "__main__":
         )
 
         multiple_deeponet = load_multionet(
-            "models/19-02/multionet.pth",
+            "models/02-19/multionet.pth",
             branch_input_size,
             trunk_input_size - 1,
             hidden_size,
@@ -238,6 +244,7 @@ if __name__ == "__main__":
             trunk_hidden_layers,
             output_neurons,
             N_outputs,
+            architecture="branch",
         )
 
     # Test the vanilla DeepONet
@@ -251,6 +258,17 @@ if __name__ == "__main__":
     )
     v_targets = v_targets.reshape(-1, len(sensor_locations), len(test_timesteps))
 
+    v_errors = np.abs(v_predictions - v_targets)
+    v_relative_errors = v_errors / np.abs(v_targets)
+
+    plot_relative_errors_over_time(
+        v_relative_errors, title="Relative errors in space (DeepONet)"
+    )
+
+    plot_relative_errors_over_time(
+        v_relative_errors.transpose(0, 2, 1), title="Relative errors in time (DeepONet)"
+    )
+
     # Plot some vanilla DeepONet results
     heatmap_plot(
         sensor_locations,
@@ -262,11 +280,11 @@ if __name__ == "__main__":
     )
 
     # Test the MODeepONet
-    total_loss, m_predictions, m_targets = test_multionet_polynomial(
+    coeff_loss, total_loss, m_predictions, m_targets = test_multionet_poly(
         multiple_deeponet, dataloader_test_multi, sensor_locations
     )
 
-    print(f"Average prediction error (MODeepONet): {total_loss:.3E}")
+    print(f"Average prediction error (MultiONet): {total_loss:.3E}")
 
     m_predictions = m_predictions.reshape(
         -1, len(test_timesteps), len(sensor_locations)
@@ -275,6 +293,18 @@ if __name__ == "__main__":
         -1, len(test_timesteps), len(sensor_locations)
     ).transpose(0, 2, 1)
 
+    m_errors = np.abs(m_predictions - m_targets)
+    m_relative_errors = m_errors / np.abs(m_targets)
+
+    plot_relative_errors_over_time(
+        m_relative_errors, title="Relative errors in space (MultiONet)"
+    )
+
+    plot_relative_errors_over_time(
+        m_relative_errors.transpose(0, 2, 1),
+        title="Relative errors in time (MultiONet)",
+    )
+
     # Plot some MODeepONet results
     heatmap_plot(
         sensor_locations,
@@ -282,7 +312,7 @@ if __name__ == "__main__":
         m_targets,
         5,
         m_predictions,
-        title="DeepONet results",
+        title="MultiONet results",
     )
 
     # Plot the results

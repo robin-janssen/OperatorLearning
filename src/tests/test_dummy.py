@@ -2,7 +2,7 @@
 # main testing routine
 
 import numpy as np
-from datagen import generate_polynomial_data
+from data import generate_polynomial_data
 
 
 def test_generate_polynomial_data():
