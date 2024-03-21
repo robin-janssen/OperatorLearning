@@ -1,73 +1,9 @@
 from __future__ import annotations
 
 import numpy as np
-from scipy.integrate import simps
 
+from .data_utils import numerical_integration, rbf_kernel
 from plotting import plot_functions_and_antiderivatives, plot_functions_only
-
-
-def rbf_kernel(sensor_points: np.array, length_scale: int) -> np.array:
-    """
-    Radial Basis Function (RBF) kernel (Gaussian kernel).
-
-    :param sensor_points: Numpy array with the x-values at which the RBF should be evaluated
-    :param length_scale:
-    """
-    sensor_points = sensor_points[:, np.newaxis]
-    sqdist = (
-        np.sum(sensor_points**2, 1).reshape(-1, 1)
-        + np.sum(sensor_points**2, 1)
-        - 2 * np.dot(sensor_points, sensor_points.T)
-    )
-    return np.exp(-0.5 * (1 / length_scale**2) * sqdist)
-
-
-def numerical_integration(
-    y_values: np.array, x_values: np.array, method: str = "trapezoidal"
-) -> np.array:
-    """
-    Compute the cumulative numerical integration of y_values with respect to x_values.
-
-    :param y_values: Function values at each x (numpy array).
-    :param x_values: Points at which the function is evaluated (numpy array).
-    :param method: Method of numerical integration ('trapezoidal', 'cumsum', or 'simpson').
-    :return: Cumulative integral (antiderivative) at each point in x_values.
-    """
-    antiderivative = np.zeros_like(y_values)
-
-    if method == "trapezoidal":
-        for i in range(1, len(x_values)):
-            antiderivative[i] = antiderivative[i - 1] + np.trapz(
-                y_values[i - 1 : i + 1], x_values[i - 1 : i + 1]
-            )
-    elif method == "cumsum":
-        dx = x_values[1] - x_values[0]
-        antiderivative = np.cumsum(y_values) * dx
-    elif method == "simpson":
-        if len(x_values) % 2 == 0:
-            raise ValueError("Simpson's rule requires an odd number of points.")
-        for i in range(1, len(x_values), 2):
-            antiderivative[i] = simps(y_values[: i + 1], x_values[: i + 1])
-            if i + 1 < len(x_values):
-                antiderivative[i + 1] = antiderivative[i]
-    else:
-        raise ValueError(
-            "Invalid integration method. Choose 'trapezoidal', 'cumsum', or 'simpson'."
-        )
-
-    return antiderivative
-
-
-# def trapezoidal_rule(y_values: np.array, x_values: np.array) -> float:
-#     """
-#     Numerically integrate y_values with respect to x_values using the trapezoidal rule.
-
-#     :param y_values: Function values at each x (numpy array).
-#     :param x_values: Points at which the function is evaluated (numpy array).
-#     :return: Approximate integral (antiderivative) of the function.
-#     """
-#     integral = np.trapz(y_values, x_values)
-#     return integral
 
 
 def generate_polynomial_data(

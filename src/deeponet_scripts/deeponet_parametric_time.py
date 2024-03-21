@@ -3,17 +3,19 @@
 
 import numpy as np
 
-# from datagen import generate_decaying_sines, surface_plot
-from datagen import generate_random_decaying_sines
+# from data import generate_decaying_sines, surface_plot
+from data import generate_random_decaying_sines
 from plotting import heatmap_plot, plot_functions_only
 from training import (
     train_deeponet_visualized,
-    plot_losses,
     load_deeponet,
     test_deeponet,
 )
-from deeponet_time_dependent import create_dataloader_2D_frac
-from utils import save_model
+
+from plotting import plot_losses
+
+from data import create_dataloader_2D_frac
+from training import save_model
 
 
 if __name__ == "__main__":

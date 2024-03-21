@@ -1,25 +1,24 @@
-import numpy as np
 import h5py
 
 filename = "data/free_cooling/snapshot_000.hdf5"
 f = h5py.File(filename, "r")
 keys = list(f.keys())
-# print(keys)
-# config = f[keys[0]]
-# print(config)
-# print("Attributes in '/Config':")
-# for attr_name in config.attrs:
-#     print(f"{attr_name}: {config.attrs[attr_name]}")
-# header = f[keys[1]]
-# print(header)
-# print("Attributes in '/Header':")
-# for attr_name in header.attrs:
-#     print(f"{attr_name}: {header.attrs[attr_name]}")
-# parameters = f[keys[2]]
-# print(parameters)
-# print("Attributes in '/Parameters':")
-# for attr_name in parameters.attrs:
-#     print(f"{attr_name}: {parameters.attrs[attr_name]}")
+print(keys)
+config = f[keys[0]]
+print(config)
+print("Attributes in '/Config':")
+for attr_name in config.attrs:
+    print(f"{attr_name}: {config.attrs[attr_name]}")
+header = f[keys[1]]
+print(header)
+print("Attributes in '/Header':")
+for attr_name in header.attrs:
+    print(f"{attr_name}: {header.attrs[attr_name]}")
+parameters = f[keys[2]]
+print(parameters)
+print("Attributes in '/Parameters':")
+for attr_name in parameters.attrs:
+    print(f"{attr_name}: {parameters.attrs[attr_name]}")
 parttype0 = f[keys[3]]
 print(parttype0)
 print(parttype0.keys())

@@ -139,11 +139,11 @@ cython_debug/
 
 
 # Own additions
-models/
+/models
 plots/
 .DS_Store
 scripts/
 .vscode/
-data/
+/data
 optuna/
 

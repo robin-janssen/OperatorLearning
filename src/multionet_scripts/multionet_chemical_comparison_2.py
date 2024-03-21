@@ -1,49 +1,51 @@
-import numpy as np
-from torchinfo import summary
+# Comparison of the performance of the MultiONet with different fine-tuning strategies
+# The first model is the original MultiONet trained with the initial settings.
+# The second model is the result of some rough fine-tuning of the architecture and hyperparameters.
+# The third model is the result of a more extensive fine-tuning.
 
-from chemicals import chemicals
+import numpy as np
+from data import chemicals
 from plotting import (
     plot_chemical_examples,
     plot_chemicals_comparative,
-    plot_losses,
     plot_chemical_results,
-    plot_chemiocal_results_and_errors,
+    plot_chemical_results_and_errors,
     plot_chemical_errors,
     plot_relative_errors_over_time,
-    plot_functions_only,
 )
-from training import (
-    create_dataloader_chemicals,
-    train_multionet_chemical,
-    test_deeponet,
-    load_multionet,
-)
-from utils import save_model, load_chemical_data, read_yaml_config
+from data import create_dataloader_chemicals
+from training import test_deeponet, load_multionet
+from utils import load_chemical_data
 
 
-if __name__ == "__main__":
+def run(args):
 
-    TRAIN = False
-    VIS = False
-    USE_MASS_CONSERVATION = True
-    pretrained_model_path = None  # "models/02-28/multionet_chemical_500.pth"
-    branch_input_size = 29
-    trunk_input_size = 1
-    hidden_size = 100
-    branch_hidden_layers = 2
-    trunk_hidden_layers = 2
-    num_epochs = 200
-    learning_rate = 3e-4
-    fraction = 1
-    output_neurons = 290  # number of neurons in the last layer of MODeepONet
-    N_outputs = 29  # number of outputs of MODeepONet
-    architecture = "both"  # "both", "branch", "trunk"
-    device = "mps"  # "cpu", "mps"
+    # TRAIN = False
+    # VIS = False
+    # USE_MASS_CONSERVATION = True
+    # pretrained_model_path = None  # "models/02-28/multionet_chemical_500.pth"
+    # branch_input_size = 29
+    # trunk_input_size = 1
+    # hidden_size = 100
+    # branch_hidden_layers = 2
+    # trunk_hidden_layers = 2
+    # num_epochs = 200
+    # learning_rate = 3e-4
+    # fraction = 1
+    # output_neurons = 290  # number of neurons in the last layer of MODeepONet
+    # N_outputs = 29  # number of outputs of MODeepONet
+    # architecture = "both"  # "both", "branch", "trunk"
+    # device = "mps"  # "cpu", "mps"
 
-    if USE_MASS_CONSERVATION:
-        from chemicals import masses
-    else:
-        masses = None
+    VIS = args.vis
+    branch_input_size = args.branch_input_size
+    trunk_input_size = args.trunk_input_size
+    hidden_size = args.hidden_size
+    branch_hidden_layers = args.branch_hidden_layers
+    trunk_hidden_layers = args.trunk_hidden_layers
+    output_neurons = args.output_neurons
+    N_outputs = args.n_outputs
+    device = args.device
 
     # data = load_chemical_data("data/dataset100")
     data = load_chemical_data("data/dataset1000")
@@ -59,7 +61,6 @@ if __name__ == "__main__":
     # Split the data into training and testing (80/20)
     # train_data = data[: int(0.8 * data.shape[0])]
     # test_data = data[int(0.8 * data.shape[0]) :]
-    train_data = data[:500]
     test_data = data[500:550]
 
     extracted_chemicals = chemicals.split(", ")
@@ -68,15 +69,9 @@ if __name__ == "__main__":
         plot_chemical_examples(data, extracted_chemicals)
         plot_chemicals_comparative(data, extracted_chemicals)
 
-    dataloader_train = create_dataloader_chemicals(
-        train_data, timesteps, fraction=1, batch_size=32, shuffle=True
-    )
-
     dataloader_test = create_dataloader_chemicals(
         test_data, timesteps, fraction=1, batch_size=32, shuffle=False
     )
-
-    data_example = next(iter(dataloader_train))
 
     multionet_standard = load_multionet(
         "models/02-28/multionet_chemical_500.pth",
@@ -220,12 +215,10 @@ if __name__ == "__main__":
         model_names=model_names,
     )
 
-    plot_chemiocal_results_and_errors(
+    plot_chemical_results_and_errors(
         predictions=all_predictions,
         ground_truth=ground_truth_st,
         names=extracted_chemicals,
         num_chemicals=4,
         model_names=model_names,
     )
-
-    # Plot average

@@ -1,29 +1,7 @@
+from typing import TypeVar
+
 import torch
 import torch.nn as nn
-
-
-# # TODO Use inheritance to constrain the definition of operator networks and to enable proper type hinting.
-# class OperatorNetwork(nn.Module):
-#     def __new__(cls, *args, **kwargs):
-#         if cls is OperatorNetwork:
-#             raise TypeError("OperatorNetwork class may not be instantiated")
-#         # Ensure that the subclass has a forward method
-#         if not hasattr(cls, "forward") or not callable(cls.forward):
-#             raise TypeError("OperatorNetwork subclass must implement a forward method")
-#         # Ensure that the subclass has a __init__ method
-#         if not hasattr(cls, "__init__") or not callable(cls.__init__):
-#             raise TypeError(
-#                 "OperatorNetwork subclass must implement an __init__ method"
-#             )
-#         # Ensure that the subclass has branch and trunk networks
-#         if not hasattr(cls, "branch_net") or not hasattr(cls, "trunk_net"):
-#             raise TypeError(
-#                 "OperatorNetwork subclass must have branch_net and trunk_net attributes"
-#             )
-#         return super().__new__(cls)
-
-#     def __init__(self):
-#         super(OperatorNetwork, self).__init__()
 
 
 class OperatorNetwork(nn.Module):
@@ -41,6 +19,18 @@ class OperatorNetwork(nn.Module):
     def forward(self, branch_input, trunk_input):
         # Define a generic forward pass or raise an error to enforce child class implementation
         raise NotImplementedError("Forward method must be implemented by subclasses.")
+
+    @staticmethod
+    def _calculate_split_sizes(total_neurons, num_splits):
+        """Helper function to calculate split sizes for even distribution"""
+        base_size = total_neurons // num_splits
+        remainder = total_neurons % num_splits
+        return [
+            base_size + 1 if i < remainder else base_size for i in range(num_splits)
+        ]
+
+
+OperatorNetworkType = TypeVar("OperatorNetworkType", bound=OperatorNetwork)
 
 
 class BranchNet(nn.Module):
@@ -125,16 +115,6 @@ class MultiONet(OperatorNetwork):
 
         return torch.cat(result, dim=1)
 
-    def _calculate_split_sizes(self, total_neurons, num_splits):
-        """Helper function to calculate split sizes for even distribution"""
-        base_size = total_neurons // num_splits
-        remainder = total_neurons % num_splits
-
-        sizes = [
-            base_size + 1 if i < remainder else base_size for i in range(num_splits)
-        ]
-        return sizes
-
 
 class MultiONetB(OperatorNetwork):
     def __init__(
@@ -174,16 +154,6 @@ class MultiONetB(OperatorNetwork):
 
         return torch.cat(result, dim=1)
 
-    def _calculate_split_sizes(self, total_neurons, num_splits):
-        """Helper function to calculate split sizes for even distribution"""
-        base_size = total_neurons // num_splits
-        remainder = total_neurons % num_splits
-
-        sizes = [
-            base_size + 1 if i < remainder else base_size for i in range(num_splits)
-        ]
-        return sizes
-
 
 class MultiONetT(OperatorNetwork):
     def __init__(
@@ -222,26 +192,3 @@ class MultiONetT(OperatorNetwork):
             result.append(torch.sum(branch_output * t_split, dim=1, keepdim=True))
 
         return torch.cat(result, dim=1)
-
-    def _calculate_split_sizes(self, total_neurons, num_splits):
-        """Helper function to calculate split sizes for even distribution"""
-        base_size = total_neurons // num_splits
-        remainder = total_neurons % num_splits
-
-        sizes = [
-            base_size + 1 if i < remainder else base_size for i in range(num_splits)
-        ]
-        return sizes
-
-
-class MultiONetTest(OperatorNetwork):
-    def __init__(
-        self, inputs_b, hidden_b, layers_b, inputs_t, hidden_t, layers_t, outputs
-    ):
-        super(MultiONetTest, self).__init__()
-        self.branch_net = BranchNet(inputs_b, hidden_b, outputs, layers_b)
-
-    def forward(self, branch_input, trunk_input):
-        branch_output = self.branch_net(branch_input)
-        trunk_output = self.trunk_net(trunk_input)
-        return torch.sum(branch_output * trunk_output, dim=1)
