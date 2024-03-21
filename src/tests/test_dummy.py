@@ -1,7 +1,15 @@
 #!/usr/bin/env python3
 # main testing routine
 
+import sys
+from pathlib import Path
 import numpy as np
+
+src_dir = Path(__file__).resolve().parents[1]
+
+# Add the 'src' directory to sys.path to make the modules importable
+sys.path.append(str(src_dir))
+
 from data import generate_polynomial_data
 
 
