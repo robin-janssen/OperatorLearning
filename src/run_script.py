@@ -109,12 +109,18 @@ if __name__ == "__main__":
     parser.add_argument(
         "--device",
         type=str,
-        default="cpu",
-        choices=["cpu", "mps"],
+        default="cuda:1",
+        choices=["cpu", "mps", "cuda"],
         help="Device to use for training.",
+    )
+
+    parser.add_argument(
+        "--device_ids",
+        type=tuple(int),
+        default=(0, 1),
+        help="Device IDs to use for training.",
     )
 
     args = parser.parse_args()
 
-    # Dynamically run the specified script with arguments
     run_script(args.script, args)

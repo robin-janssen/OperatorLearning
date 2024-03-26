@@ -7,6 +7,7 @@ from .train_deeponet import (
 from .train_multionet import (
     train_multionet_poly_coeff,
     train_multionet_chemical,
+    train_multionet_chemical_remote,
     train_multionet_chemical_cosann,
     train_multionet_poly_values,
     test_multionet_poly,
@@ -27,6 +28,7 @@ __all__ = [
     "load_deeponet",
     "train_multionet_poly_coeff",
     "train_multionet_chemical",
+    "train_multionet_chemical_remote",
     "train_multionet_chemical_cosann",
     "train_multionet_poly_values",
     "test_multionet_poly",

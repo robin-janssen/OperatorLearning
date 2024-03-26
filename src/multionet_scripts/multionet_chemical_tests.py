@@ -38,7 +38,7 @@ def run(args):
     output_neurons = 290  # number of neurons in the last layer of MODeepONet
     N_outputs = 29  # number of outputs of MODeepONet
     architecture = "both"  # "both", "branch", "trunk"
-    device = "mps"  # "cpu", "mps"
+    device = args.device
     regularization_factor = 0.013
     massloss_factor = 0.013
 
@@ -98,7 +98,7 @@ def run(args):
             architecture=architecture,
             pretrained_model_path=pretrained_model_path,
             device=device,
-            visualize=True,
+            visualize=False,
             regularization_factor=regularization_factor,
             massloss_factor=massloss_factor,
         )

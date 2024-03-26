@@ -323,7 +323,7 @@ def train_multionet_chemical(
     architecture: str = "both",
     pretrained_model_path: str | None = None,
     device: str = "cpu",
-    visualize: bool = True,
+    use_streamlit: bool = True,
     optuna_trial: optuna.Trial | None = None,
     regularization_factor: float = 0.0,
     massloss_factor: float = 0.0,
@@ -345,7 +345,7 @@ def train_multionet_chemical(
     :param architecture: Architecture of the MODeepONet model. Can be "branch", "trunk", or "both".
     :param pretrained_model_path: Path to a pretrained model.
     :param device: The device to use for training.
-    :param visualize: Whether to visualize the training progress.
+    :param use_streamlit: Whether to use Streamlit for visualization.
     :param optuna_trial: An Optuna trial object for hyperparameter optimization.
     :param regularization_factor: The regularization factor to use for the loss.
 
@@ -451,7 +451,174 @@ def train_multionet_chemical(
                 targets = targets.reshape(-1, N_timesteps, N_outputs)[:3]
                 targets_vis = targets.transpose(0, 2, 1)
             output_history[epoch] = outputs
-        if visualize:
+        if use_streamlit:
+            streamlit_visualization_history(
+                train_loss_history[: epoch + 1],
+                test_loss_history[: epoch + 1],
+                output_history,
+                targets_vis,
+                epoch,
+            )
+
+    if test_loader is not None:
+        return deeponet, train_loss_history, test_loss_history
+    else:
+        return deeponet, train_loss_history
+
+
+@time_execution
+def train_multionet_chemical_remote(
+    data_loader: DataLoader,
+    masses: list | None = None,
+    branch_input_size: int = 101,
+    trunk_input_size: int = 1,
+    hidden_size: int = 40,
+    branch_hidden_layers: int = 3,
+    trunk_hidden_layers: int = 3,
+    output_size: int = 100,
+    N_outputs: int = 10,
+    num_epochs: int = 1000,
+    learning_rate: float = 0.001,
+    schedule: bool = False,
+    test_loader: DataLoader = None,
+    N_sensors: int = 101,
+    N_timesteps: int = 101,
+    architecture: str = "both",
+    pretrained_model_path: str | None = None,
+    device: str = "cpu",
+    device_id: int = 0,
+    use_streamlit: bool = True,
+    optuna_trial: optuna.Trial | None = None,
+    regularization_factor: float = 0.0,
+    massloss_factor: float = 0.0,
+) -> tuple:
+    """Train a DeepONet model.
+    The function instantiates a DeepONet model (with multiple outputs) and trains it using the provided DataLoader.
+    Note that it assumes equal number of neurons in each hidden layer of the branch and trunk networks.
+
+    :param data_loader: A DataLoader object.
+    :param masses: A list of masses for the chemical species. If None, no mass conservation loss will be used.
+    :param branch_input_size: Input size for the branch network.
+    :param trunk_input_size: Input size for the trunk network.
+    :param hidden_size: Number of hidden units in each layer.
+    :param num_epochs: Number of epochs to train for.
+    :param branch_hidden_layers: Number of hidden layers in the branch network.
+    :param trunk_hidden_layers: Number of hidden layers in the trunk network.
+    :param output_size: Number of neurons in the last layer.
+    :param N_outputs: Number of outputs.
+    :param architecture: Architecture of the MODeepONet model. Can be "branch", "trunk", or "both".
+    :param pretrained_model_path: Path to a pretrained model.
+    :param device: The device to use for training.
+    :param device_id: The GPU ID to use for training.
+    :param use_streamlit: Whether to use Streamlit for visualization.
+    :param optuna_trial: An Optuna trial object for hyperparameter optimization.
+    :param regularization_factor: The regularization factor to use for the loss.
+
+    :return: Trained DeepONet model and loss history.
+    """
+    device = torch.device(device)
+
+    if pretrained_model_path is None:
+        if architecture == "both":
+            model = MultiONet
+        elif architecture == "branch":
+            model = MultiONetB
+        elif architecture == "trunk":
+            model = MultiONetT
+        deeponet = model(
+            branch_input_size,
+            hidden_size,
+            branch_hidden_layers,
+            trunk_input_size,
+            hidden_size,
+            trunk_hidden_layers,
+            output_size,
+            N_outputs,
+            device,
+        )
+    else:
+        deeponet = load_multionet(
+            pretrained_model_path,
+            branch_input_size,
+            trunk_input_size,
+            hidden_size,
+            branch_hidden_layers,
+            trunk_hidden_layers,
+            output_size,
+            N_outputs,
+            architecture,
+        )
+        prev_losses = np.load(pretrained_model_path.replace(".pth", "_losses.npz"))
+        prev_train_loss = prev_losses["train_loss"]
+        prev_test_loss = prev_losses["test_loss"]
+
+    crit = nn.MSELoss(reduction="sum")
+    if masses is None:
+        criterion = crit
+    else:
+        weights = (1.0, massloss_factor)
+        criterion = mass_conservation_loss(masses, crit, weights, device)
+
+    optimizer = optim.Adam(
+        deeponet.parameters(), lr=learning_rate, weight_decay=regularization_factor
+    )
+    if schedule:
+        scheduler = optim.lr_scheduler.LinearLR(
+            optimizer, start_factor=1, end_factor=0.3, total_iters=num_epochs
+        )
+    else:
+        scheduler = optim.lr_scheduler.LinearLR(
+            optimizer, start_factor=1, end_factor=1, total_iters=num_epochs
+        )
+
+    if pretrained_model_path is None:
+        train_loss_history = np.zeros(num_epochs)
+        test_loss_history = np.zeros(num_epochs)
+    else:
+        train_loss_history = np.concatenate((prev_train_loss, np.zeros(num_epochs)))
+        test_loss_history = np.concatenate((prev_test_loss, np.zeros(num_epochs)))
+    output_history = np.zeros((num_epochs, 3, N_sensors, N_timesteps))
+    total_predictions = len(data_loader.dataset)
+
+    progress_bar = tqdm(range(num_epochs), desc="Training Progress")
+    for epoch in progress_bar:
+        epoch_loss = 0
+        for branch_inputs, trunk_inputs, targets in data_loader:
+            if device != "cpu":
+                branch_inputs = branch_inputs.to(device)
+                trunk_inputs = trunk_inputs.to(device)
+                targets = targets.to(device)
+                deeponet.to(device)
+                # TODO Why does the Deeponet need to be moved to the device in every iteration (and in the testing function also)?
+            optimizer.zero_grad()
+            outputs = deeponet(branch_inputs, trunk_inputs)
+            loss = criterion(outputs, targets)
+            loss.backward()
+            optimizer.step()
+            epoch_loss += loss.item()
+        epoch_loss /= total_predictions * N_outputs
+        train_loss_history[epoch] = epoch_loss
+        if optuna_trial is not None:
+            optuna_trial.report(epoch_loss, epoch)
+            if optuna_trial.should_prune():
+                raise optuna.TrialPruned()
+        clr = optimizer.param_groups[0]["lr"]
+        progress_bar.set_postfix({"loss": epoch_loss, "lr": clr})
+        scheduler.step()
+        if test_loader is not None:
+            test_loss, outputs, targets = test_deeponet(
+                deeponet, test_loader, device, criterion
+            )
+            test_loss_history[epoch] = test_loss
+            outputs = outputs.reshape(-1, N_timesteps, N_outputs)[:3]
+            outputs = outputs.transpose(0, 2, 1)
+            if epoch == 0:
+                targets = targets.reshape(-1, N_timesteps, N_outputs)[:3]
+                targets_vis = targets.transpose(0, 2, 1)
+            output_history[epoch] = outputs
+        if epoch % 10 == 0:
+            print(f"Device: {device}, Epoch: {epoch}, Loss: {epoch_loss}")
+        if use_streamlit:
             streamlit_visualization_history(
                 train_loss_history[: epoch + 1],
                 test_loss_history[: epoch + 1],
@@ -485,7 +652,7 @@ def train_multionet_chemical_cosann(
     architecture: str = "both",
     pretrained_model_path: str | None = None,
     device: str = "cpu",
-    visualize: bool = True,
+    use_streamlit: bool = True,
     optuna_trial: optuna.Trial | None = None,
     regularization_factor: float = 0.0,
     massloss_factor: float = 0.0,
@@ -510,7 +677,7 @@ def train_multionet_chemical_cosann(
     :param architecture: Architecture of the MODeepONet model. Can be "branch", "trunk", or "both".
     :param pretrained_model_path: Path to a pretrained model.
     :param device: The device to use for training.
-    :param visualize: Whether to visualize the training progress.
+    :param use_streamlit: Whether to use Streamlit for visualization.
     :param optuna_trial: An Optuna trial object for hyperparameter optimization.
     :param regularization_factor: The regularization factor to use for the loss.
     :param massloss_factor: The weight of the mass conservation loss.
@@ -616,7 +783,7 @@ def train_multionet_chemical_cosann(
                 targets = targets.reshape(-1, N_timesteps, N_outputs)[:3]
                 targets_vis = targets.transpose(0, 2, 1)
             output_history[epoch] = outputs
-        if visualize:
+        if use_streamlit:
             streamlit_visualization_history(
                 train_loss_history[: epoch + 1],
                 test_loss_history[: epoch + 1],
