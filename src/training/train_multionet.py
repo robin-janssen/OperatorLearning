@@ -13,9 +13,9 @@ from models import (
     MultiONet,
     MultiONetB,
     MultiONetT,
-    OperatorNetworkType,
     initialize_weights,
 )
+from models.deeponet import OperatorNetworkType
 from plotting import streamlit_visualization_history
 from .train_deeponet import test_deeponet
 from .train_utils import (

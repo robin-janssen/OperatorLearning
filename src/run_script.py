@@ -25,7 +25,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--script",
         type=str,
-        default="multionet_scripts.multionet_chemical_DEns.run",  # "multionet_scripts.multionet_chemical_comparison_2.run",
+        # default="multionet_scripts.multionet_deeponet_comparison.run",
+        default="multionet_scripts.multionet_chemical_DEns.run",
         help="Path to the script to run, e.g., 'deeponet_scripts.deeponet_training.run'",
     )
 

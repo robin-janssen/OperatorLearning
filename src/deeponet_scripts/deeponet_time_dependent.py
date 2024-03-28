@@ -9,7 +9,7 @@ from training import (
     train_deeponet,
     load_deeponet,
     test_deeponet,
-    create_dataloader_2D_frac,
+    create_dataloader_2D,
 )
 from training import save_model
 
@@ -73,7 +73,7 @@ if __name__ == "__main__":
     # grid = subsampling_grid(len(sensor_locations), len(timesteps), fraction=fraction, visualize=True)
 
     # Create a DataLoader for DeepONet
-    dataloader = create_dataloader_2D_frac(
+    dataloader = create_dataloader_2D(
         train_data,
         sensor_locations,
         timesteps,
@@ -82,7 +82,7 @@ if __name__ == "__main__":
         fraction=fraction,
     )
 
-    dataloader_test = create_dataloader_2D_frac(
+    dataloader_test = create_dataloader_2D(
         test_data, sensor_locations, timesteps, batch_size=32, shuffle=False
     )
     print("DataLoader created.")

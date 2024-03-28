@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import os
-import yaml
+import time
 from datetime import datetime
+import yaml
+
 import streamlit as st
+import torch
 
 
 # TODO complete type hints
@@ -78,3 +81,10 @@ def get_project_path(relative_path):
     project_resource_path = os.path.normpath(project_resource_path)
 
     return project_resource_path
+
+
+def set_random_seed(gpu_id: int = 0):
+    # Combine the current time with the GPU ID to create a unique seed
+    seed = int(time.time()) + gpu_id
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)  # If you're using CUDA

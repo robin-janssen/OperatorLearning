@@ -373,12 +373,15 @@ def plot_losses(
     loss_histories: tuple[np.array, ...],
     labels: tuple[str, ...],
     title: str = "Losses",
+    store_plot: bool = False,
 ) -> None:
     """
     Plot the loss trajectories for the training of multiple models.
 
     :param loss_histories: List of loss history arrays.
     :param labels: List of labels for each loss history.
+    :param title: Title of the plot.
+    :param store_plot: Whether to store the plot as an image file.
     """
 
     # Create the figure
@@ -394,11 +397,12 @@ def plot_losses(
     plt.title(title)
     plt.legend()
 
-    filename = "losses.png"
-    directory = create_date_based_directory(subfolder="plots")
-    filepath = save_plot_counter(filename, directory)
-    plt.savefig(filepath)
-    print(f"Plot saved as: {filepath}")
+    if store_plot:
+        filename = "losses.png"
+        directory = create_date_based_directory(subfolder="plots")
+        filepath = save_plot_counter(filename, directory)
+        plt.savefig(filepath)
+        print(f"Plot saved as: {filepath}")
 
     plt.show()
 
@@ -1097,4 +1101,110 @@ def plot_mass_conservation(ground_truth, masses, num_examples=5):
     plt.ylabel("Total Mass")
     plt.title("Total Mass Conservation Over Time")
     plt.legend()
+    plt.show()
+
+
+def visualise_deep_ensemble_2(
+    predictions_list: list[np.array], ground_truth: np.array, num_chemicals: int
+):
+    """
+    Visualize the predictions of a deep ensemble and the ground truth.
+
+    :param predictions_list: List of arrays with shape [N_datapoints, N_timesteps, N_chemicals]
+    :param ground_truth: Array of shape [N_datapoints, N_timesteps, N_chemicals]
+    :param num_chemicals: Number of chemicals to plot
+    """
+    # Calculate the average prediction and standard deviation
+    stacked_predictions = np.stack(predictions_list, axis=0)
+    mean_predictions = np.mean(stacked_predictions, axis=0)
+    std_predictions = np.std(stacked_predictions, axis=0)
+
+    fig, axs = plt.subplots(2, 2, figsize=(10, 10), sharex=True, sharey=True)
+    colors = plt.cm.viridis(np.linspace(0, 1, num_chemicals))
+
+    for i, ax in enumerate(axs):
+        for j in range(num_chemicals):
+            # Ground truth
+            ax.plot(
+                ground_truth[i, :, j],
+                color=colors[j],
+                label=f"Chemical {j+1}" if i == 0 else "",
+            )
+
+            # Mean prediction
+            ax.plot(mean_predictions[i, :, j], "--", color=colors[j])
+
+            # Predictive uncertainty (1, 2, 3 sigma)
+            for sigma in [1, 2, 3]:
+                ax.fill_between(
+                    range(mean_predictions.shape[1]),
+                    mean_predictions[i, :, j] - sigma * std_predictions[i, :, j],
+                    mean_predictions[i, :, j] + sigma * std_predictions[i, :, j],
+                    color=colors[j],
+                    alpha=0.5 / sigma,
+                )
+
+    axs[0].legend()
+    fig.suptitle("Deep Ensemble Predictions and Ground Truth")
+    plt.tight_layout()
+    plt.show()
+
+
+def visualise_deep_ensemble(
+    predictions_list, ground_truth, num_chemicals, chemical_names
+):
+    """
+    Visualize the predictions of a deep ensemble and the ground truth.
+
+    :param predictions_list: List of arrays with shape [N_datapoints, N_timesteps, N_chemicals]
+    :param ground_truth: Array of shape [N_datapoints, N_timesteps, N_chemicals]
+    :param num_chemicals: Number of chemicals to plot
+    :param chemical_names: List of chemical names
+    """
+    # Ensure num_chemicals does not exceed the size of the third dimension
+    num_chemicals = min(num_chemicals, ground_truth.shape[2])
+
+    # Calculate mean and standard deviation of predictions
+    predictions_stack = np.stack(predictions_list, axis=0)
+    prediction_mean = np.mean(predictions_stack, axis=0)
+    prediction_std = np.std(predictions_stack, axis=0)
+
+    # Generate colors
+    colors = plt.cm.viridis(np.linspace(0, 1, num_chemicals))
+
+    fig, axs = plt.subplots(2, 2, figsize=(15, 10))
+    for datapoint_idx in range(4):  # Assuming four subplots
+        ax = axs[datapoint_idx // 2, datapoint_idx % 2]
+        for chem_idx in range(num_chemicals):
+            gt = ground_truth[:, :, chem_idx]
+            mean = prediction_mean[:, :, chem_idx]
+            std = prediction_std[:, :, chem_idx]
+
+            timesteps = np.arange(gt.shape[1])
+            ax.plot(
+                timesteps,
+                gt[datapoint_idx],
+                color=colors[chem_idx],
+                label=f"GT {chemical_names[chem_idx]}",
+            )
+            ax.plot(
+                timesteps,
+                mean[datapoint_idx],
+                "--",
+                color=colors[chem_idx],
+                label=f"Pred Chem {chemical_names[chem_idx]}",
+            )
+
+            # Plot standard deviations as shaded areas
+            for sigma_multiplier in [1, 2, 3]:  # 1, 2, and 3 standard deviations
+                ax.fill_between(
+                    timesteps,
+                    mean[datapoint_idx] - sigma_multiplier * std[datapoint_idx],
+                    mean[datapoint_idx] + sigma_multiplier * std[datapoint_idx],
+                    color=colors[chem_idx],
+                    alpha=0.5 / sigma_multiplier,
+                )
+
+    plt.legend()
+    plt.tight_layout()
     plt.show()

@@ -10,7 +10,7 @@ from training import (
     save_model,
 )
 
-# from utils import read_yaml_config
+from utils import set_random_seed
 
 
 def train_model_on_gpu(args, gpu_id):
@@ -22,7 +22,7 @@ def train_model_on_gpu(args, gpu_id):
     device = f"cuda:{gpu_id}"
     print(f"Training on {device}")
 
-    torch.manual_seed(gpu_id)
+    set_random_seed(gpu_id)
 
     data = load_chemical_data(args.data_path)
     data = data[:, :, :29]

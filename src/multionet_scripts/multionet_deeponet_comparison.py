@@ -8,7 +8,12 @@ import numpy as np
 # import matplotlib.pyplot as plt
 
 # from data import generate_decaying_sines, surface_plot
-from data import generate_decaying_polynomials
+from data import (
+    generate_decaying_polynomials,
+    create_dataloader_2D,
+    create_dataloader_2D_coeff,
+)
+
 from plotting import (
     heatmap_plot,
     plot_functions_only,
@@ -23,14 +28,11 @@ from training import (
     load_multionet,
     test_deeponet,
     test_multionet_poly,
-)
-from training import save_model
-from training import (
-    create_dataloader_2D_frac,
-    create_dataloader_2D_frac_coeff,
+    save_model,
 )
 
-if __name__ == "__main__":
+
+def run(args):
     TRAIN = False
     branch_input_size = 81
     N_timesteps = 16
@@ -95,7 +97,7 @@ if __name__ == "__main__":
     plot_functions_only(train_data, sensor_locations, 100)
 
     # Create the DataLoaders
-    dataloader_single = create_dataloader_2D_frac(
+    dataloader_single = create_dataloader_2D(
         train_data,
         sensor_locations,
         train_timesteps,
@@ -104,7 +106,7 @@ if __name__ == "__main__":
         fraction=fraction,
     )
 
-    dataloader_multi = create_dataloader_2D_frac_coeff(
+    dataloader_multi = create_dataloader_2D_coeff(
         train_data_mo,
         train_coeffs_mo,
         sensor_locations,
@@ -114,7 +116,7 @@ if __name__ == "__main__":
         fraction=1,
     )
 
-    dataloader_test_single = create_dataloader_2D_frac(
+    dataloader_test_single = create_dataloader_2D(
         test_data,
         sensor_locations,
         test_timesteps,
@@ -123,7 +125,7 @@ if __name__ == "__main__":
         fraction=1,
     )
 
-    dataloader_test_multi = create_dataloader_2D_frac_coeff(
+    dataloader_test_multi = create_dataloader_2D_coeff(
         test_data,
         test_coeffs,
         sensor_locations,
@@ -321,3 +323,7 @@ if __name__ == "__main__":
     # surface_plot(sensor_locations, timesteps, sines, 3, predictions, title="DeepONet results")
 
     print("Done.")
+
+
+if __name__ == "__main__":
+    run(None)

@@ -9,7 +9,8 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 
-from models import DeepONet, OperatorNetworkType
+from models import DeepONet
+from models.deeponet import OperatorNetworkType
 from plotting import streamlit_visualization_history
 from .train_utils import time_execution
 
