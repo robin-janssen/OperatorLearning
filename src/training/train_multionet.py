@@ -9,7 +9,13 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 
-from models import MultiONet, MultiONetB, MultiONetT, OperatorNetworkType
+from models import (
+    MultiONet,
+    MultiONetB,
+    MultiONetT,
+    OperatorNetworkType,
+    initialize_weights,
+)
 from plotting import streamlit_visualization_history
 from .train_deeponet import test_deeponet
 from .train_utils import (
@@ -549,6 +555,7 @@ def train_multionet_chemical_remote(
             N_outputs,
             architecture,
         )
+        deeponet.apply(initialize_weights)
         prev_losses = np.load(pretrained_model_path.replace(".pth", "_losses.npz"))
         prev_train_loss = prev_losses["train_loss"]
         prev_test_loss = prev_losses["test_loss"]

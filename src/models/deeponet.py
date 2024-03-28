@@ -192,3 +192,9 @@ class MultiONetT(OperatorNetwork):
             result.append(torch.sum(branch_output * t_split, dim=1, keepdim=True))
 
         return torch.cat(result, dim=1)
+
+
+def initialize_weights(m):
+    if isinstance(m, nn.Linear):
+        nn.init.xavier_uniform_(m.weight.data)
+        nn.init.zeros_(m.bias.data)

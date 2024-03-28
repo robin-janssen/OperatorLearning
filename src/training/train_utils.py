@@ -7,7 +7,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from models import OperatorNetworkType
+from models.deeponet import OperatorNetworkType
 from utils import create_date_based_directory
 
 

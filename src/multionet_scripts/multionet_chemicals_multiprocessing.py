@@ -2,19 +2,9 @@
 
 import multiprocessing
 import numpy as np
-
-# from torchinfo import summary
+import torch
 
 from data import create_dataloader_chemicals, load_chemical_data
-
-# from plotting import (
-#     plot_chemical_examples,
-#     plot_chemicals_comparative,
-#     plot_losses,
-#     plot_chemical_results,
-#     plot_chemical_errors,
-#     plot_relative_errors_over_time,
-# )
 from training import (
     train_multionet_chemical_remote,
     save_model,
@@ -31,6 +21,8 @@ def train_model_on_gpu(args, gpu_id):
     """
     device = f"cuda:{gpu_id}"
     print(f"Training on {device}")
+
+    torch.manual_seed(gpu_id)
 
     data = load_chemical_data(args.data_path)
     data = data[:, :, :29]

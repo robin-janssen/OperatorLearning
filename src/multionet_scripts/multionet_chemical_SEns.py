@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 # from torchinfo import summary
 
-from data import chemicals
+from data.osu_chemicals import chemicals
 from plotting import (
     plot_chemical_examples,
     plot_chemicals_comparative,

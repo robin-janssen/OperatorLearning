@@ -269,7 +269,15 @@ def create_dataloader_chemicals(
 
     # Create a TensorDataset and DataLoader
     dataset = TensorDataset(branch_inputs_tensor, trunk_inputs_tensor, targets_tensor)
-    return DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
+
+    def worker_init_fn(worker_id):
+        torch_seed = torch.initial_seed()
+        np_seed = torch_seed // 2**32 - 1
+        np.random.seed(np_seed)
+
+    return DataLoader(
+        dataset, batch_size=batch_size, shuffle=shuffle, worker_init_fn=worker_init_fn
+    )
 
 
 def create_dataloader_2D_frac_coeff(

@@ -3,7 +3,7 @@
 
 import numpy as np
 
-from data import chemicals
+from data.osu_chemicals import chemicals
 from plotting import (
     plot_chemical_examples,
     plot_chemicals_comparative,
@@ -11,11 +11,10 @@ from plotting import (
     plot_relative_errors_over_time,
 )
 from training import (
-    create_dataloader_chemicals,
     test_deeponet,
     load_multionet,
 )
-from utils import load_chemical_data
+from data import load_chemical_data, create_dataloader_chemicals
 
 
 if __name__ == "__main__":

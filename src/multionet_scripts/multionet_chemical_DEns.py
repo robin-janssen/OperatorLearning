@@ -1,9 +1,10 @@
-from training import load_multionet
-from plotting import plot_losses
-
 import os
 import yaml
-import numpy as np  # Make sure to import your model class
+import numpy as np
+
+from training import load_multionet, test_deeponet
+from plotting import plot_losses
+from data import create_dataloader_chemicals, load_chemical_data
 
 
 def load_model_and_losses(directory):
@@ -51,18 +52,40 @@ def load_model_and_losses(directory):
 
 
 def run(args):
-    directory = "src/models/03-26/"
-    directory = os.path.join(os.path.dirname(os.getcwd()), directory)
+    directory = "models/03-26/"
+    directory = os.path.join(os.getcwd(), directory)
     models, configs, losses = load_model_and_losses(directory)
+
+    data = load_chemical_data(args.data_path)
+    data = data[:, :, :29]
+    train_data, test_data = data[:500], data[500:550]
+    timesteps = np.arange(data.shape[1])
+
+    # dataloader_train = create_dataloader_chemicals(
+    #     train_data, timesteps, fraction=1, batch_size=32, shuffle=True
+    # )
+
+    dataloader_test = create_dataloader_chemicals(
+        test_data, timesteps, fraction=1, batch_size=32, shuffle=False
+    )
 
     losses_list = []
     names_list = []
-    error_list = []
+    total_loss_list = []
+    preds_list = []
+    targets_list = []
 
     for idx, (model, config, loss) in enumerate(zip(models, configs, losses)):
         losses_list.append(loss["train_loss"])
         names_list.append(f"train_loss_{idx}")
         losses_list.append(loss["test_loss"])
         names_list.append(f"test_loss_{idx}")
+        total_loss, preds, targets = test_deeponet(model, dataloader_test)
+        print(f"Average prediction error (DeepONet {idx}): {total_loss:.3E}")
+        total_loss_list.append(total_loss)
+        preds_list.append(preds)
+        targets_list.append(targets)
 
     plot_losses(losses_list, names_list)
+
+    print("Done!")

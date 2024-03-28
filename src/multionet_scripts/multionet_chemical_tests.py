@@ -4,7 +4,8 @@ import numpy as np
 
 # from torchinfo import summary
 
-from data import chemicals, create_dataloader_chemicals, load_chemical_data
+from data.osu_chemicals import chemicals
+from data import create_dataloader_chemicals, load_chemical_data
 from plotting import (
     plot_chemical_examples,
     plot_chemicals_comparative,
