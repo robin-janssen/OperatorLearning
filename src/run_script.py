@@ -25,7 +25,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--script",
         type=str,
-        default="multionet_scripts.multionet_chemical_tests.run",  # "multionet_scripts.multionet_chemical_comparison_2.run",
+        default="multionet_scripts.multionet_chemical_DEns.run",  # "multionet_scripts.multionet_chemical_comparison_2.run",
         help="Path to the script to run, e.g., 'deeponet_scripts.deeponet_training.run'",
     )
 
@@ -50,6 +50,12 @@ if __name__ == "__main__":
         type=str,
         default=None,
         help="Path to a pretrained model file.",
+    )
+    parser.add_argument(
+        "--data_path",
+        type=str,
+        default="data/dataset1000",
+        help="Path to the data file.",
     )
     parser.add_argument(
         "--branch_input_size",
@@ -82,7 +88,7 @@ if __name__ == "__main__":
         help="Number of hidden layers in the trunk network.",
     )
     parser.add_argument(
-        "--num_epochs", type=int, default=200, help="Number of epochs to train for."
+        "--num_epochs", type=int, default=500, help="Number of epochs to train for."
     )
     parser.add_argument(
         "--learning_rate", type=float, default=3e-4, help="Learning rate for training."
@@ -116,8 +122,8 @@ if __name__ == "__main__":
 
     parser.add_argument(
         "--device_ids",
-        type=tuple(int),
-        default=(0, 1),
+        type=int,
+        default=(3, 4, 5),
         help="Device IDs to use for training.",
     )
 

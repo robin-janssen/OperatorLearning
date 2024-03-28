@@ -487,7 +487,7 @@ def train_multionet_chemical_remote(
     pretrained_model_path: str | None = None,
     device: str = "cpu",
     device_id: int = 0,
-    use_streamlit: bool = True,
+    use_streamlit: bool = False,
     optuna_trial: optuna.Trial | None = None,
     regularization_factor: float = 0.0,
     massloss_factor: float = 0.0,
@@ -516,6 +516,7 @@ def train_multionet_chemical_remote(
 
     :return: Trained DeepONet model and loss history.
     """
+    print(f"Starting training on GPU {device_id}")
     device = torch.device(device)
 
     if pretrained_model_path is None:
@@ -616,8 +617,6 @@ def train_multionet_chemical_remote(
                 targets = targets.reshape(-1, N_timesteps, N_outputs)[:3]
                 targets_vis = targets.transpose(0, 2, 1)
             output_history[epoch] = outputs
-        if epoch % 10 == 0:
-            print(f"Device: {device}, Epoch: {epoch}, Loss: {epoch_loss}")
         if use_streamlit:
             streamlit_visualization_history(
                 train_loss_history[: epoch + 1],

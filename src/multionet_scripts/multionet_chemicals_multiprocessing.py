@@ -33,6 +33,7 @@ def train_model_on_gpu(args, gpu_id):
     print(f"Training on {device}")
 
     data = load_chemical_data(args.data_path)
+    data = data[:, :, :29]
     train_data, test_data = data[:500], data[500:550]
     timesteps = np.arange(data.shape[1])
 
@@ -47,26 +48,26 @@ def train_model_on_gpu(args, gpu_id):
     masses = None
 
     multionet, train_loss, test_loss = train_multionet_chemical_remote(
-        dataloader_train=dataloader_train,
+        data_loader=dataloader_train,
         masses=masses,
         branch_input_size=args.branch_input_size,
         trunk_input_size=args.trunk_input_size,
         hidden_size=args.hidden_size,
         branch_hidden_layers=args.branch_hidden_layers,
         trunk_hidden_layers=args.trunk_hidden_layers,
-        output_neurons=args.output_neurons,
-        N_outputs=args.N_outputs,
+        output_size=args.output_neurons,
+        N_outputs=args.n_outputs,
         num_epochs=args.num_epochs,
         learning_rate=args.learning_rate,
         test_loader=dataloader_test,
         N_sensors=args.branch_input_size,
         N_timesteps=timesteps.shape[0],
-        schedule=args.schedule,
+        # schedule=args.schedule,
         architecture=args.architecture,
         device=device,
         device_id=gpu_id,
-        regularization_factor=args.regularization_factor,
-        massloss_factor=args.massloss_factor,
+        # regularization_factor=args.regularization_factor,
+        # massloss_factor=args.massloss_factor,
     )
 
     save_model(
@@ -80,18 +81,18 @@ def train_model_on_gpu(args, gpu_id):
             "trunk_hidden_layers": args.trunk_hidden_layers,
             "num_epochs": args.num_epochs,
             "learning_rate": args.learning_rate,
-            "N_timesteps": args.N_timesteps,
+            "N_timesteps": timesteps.shape[0],
             "fraction": args.fraction,
             "num_samples_train": train_data.shape[0],
             "num_samples_test": test_data.shape[0],
             "output_neurons": args.output_neurons,
-            "N_outputs": args.N_outputs,
-            "schedule": args.schedule,
-            "regularization_factor": args.regularization_factor,
-            "massloss_factor": args.massloss_factor,
+            "N_outputs": args.n_outputs,
+            # "schedule": args.schedule,
+            # "regularization_factor": args.regularization_factor,
+            # "massloss_factor": args.massloss_factor,
             "device": device,
             "device_id": gpu_id,
-            "train_duration": train_multionet_chemical_remote.train_duration,
+            "train_duration": train_multionet_chemical_remote.duration,
             "architecture": args.architecture,
         },
         train_loss=train_loss,

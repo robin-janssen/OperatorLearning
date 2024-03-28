@@ -107,7 +107,8 @@ def save_model(
     :param base_dir: Base directory for saving the model.
     """
     # Create a directory based on the current date
-    model_dir = create_date_based_directory(subfolder=subfolder)
+    base_dir = os.path.dirname(os.path.realpath(__file__))
+    model_dir = create_date_based_directory(base_dir, subfolder)
 
     # Save the model state dict
     model_path = os.path.join(model_dir, f"{model_name}.pth")
