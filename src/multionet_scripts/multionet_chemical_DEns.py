@@ -11,7 +11,7 @@ from data import create_dataloader_chemicals, load_chemical_data
 from data.osu_chemicals import chemicals
 
 
-def load_model_and_losses(directory):
+def load_model_and_losses(directory, device="cpu"):
     model_files = [f for f in os.listdir(directory) if f.endswith(".pth")]
 
     models = []
@@ -29,17 +29,7 @@ def load_model_and_losses(directory):
 
         # Initialize the model based on the configuration
         model_path = os.path.join(directory, base_name + ".pth")
-        model = load_multionet(
-            model_path,
-            config["branch_input_size"],
-            config["trunk_input_size"],
-            config["hidden_size"],
-            config["branch_hidden_layers"],
-            config["trunk_hidden_layers"],
-            config["output_neurons"],
-            config["N_outputs"],
-            config["architecture"],
-        )
+        model, _, _ = load_multionet(config, device, model_path)
         models.append(model)
 
         # Load losses
@@ -90,9 +80,9 @@ def deep_ensemble_losses(losses):
 
 
 def run(args):
-    directory = "models/03-29/"
+    directory = "models/04-01/"
     directory = os.path.join(os.getcwd(), directory)
-    models, configs, losses = load_model_and_losses(directory)
+    models, configs, losses = load_model_and_losses(directory, args.device)
 
     data = load_chemical_data(args.data_path)
     data = data[:, :, :29]

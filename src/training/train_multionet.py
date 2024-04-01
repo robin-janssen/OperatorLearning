@@ -3,6 +3,7 @@ from __future__ import annotations
 import numpy as np
 from tqdm import tqdm
 import optuna
+import dataclasses
 from dataclasses import dataclass
 
 import torch
@@ -1076,7 +1077,9 @@ def test_multionet_polynomial_old(
 
 
 def load_multionet(
-    conf: type[dataclass],
+    conf: type[dataclass] | dict,
+    device: str = "cpu",
+    model_path: str | None = None,
 ) -> OperatorNetworkType | tuple:
     """
     Load a DeepONet model from a saved state dictionary.
@@ -1093,38 +1096,45 @@ def load_multionet(
             - 'output_neurons' (int): Number of neurons in the last layer.
             - 'N_outputs' (int): Number of outputs.
             - 'architecture' (str): Architecture type, e.g., 'both', 'branch', or 'trunk'.
-            - 'device' (str): The device to use for training, e.g., 'cpu', 'cuda:0'.
+            - 'device' (str): The device to use for the model, e.g., 'cpu', 'cuda:0'.
 
     Returns:
         deeponet: Loaded DeepONet model.
     """
+    # If the conf is a dataclass, convert it to a dictionary
+    # if isinstance(conf, dataclasses.dataclass):
+    #     conf = dataclasses.asdict(conf)
     # Instantiate the model
-    if conf.architecture == "both":
+    # Instantiate the model
+    if conf["architecture"] == "both":
         model = MultiONet
-    elif conf.architecture == "branch":
+    elif conf["architecture"] == "branch":
         model = MultiONetB
-    elif conf.architecture == "trunk":
+    elif conf["architecture"] == "trunk":
         model = MultiONetT
     deeponet = model(
-        conf.branch_input_size,
-        conf.hidden_size,
-        conf.branch_hidden_layers,
-        conf.trunk_input_size,
-        conf.hidden_size,
-        conf.trunk_hidden_layers,
-        conf.output_neurons,
-        conf.N_outputs,
-        conf.device,
+        conf["branch_input_size"],
+        conf["hidden_size"],
+        conf["branch_hidden_layers"],
+        conf["trunk_input_size"],
+        conf["hidden_size"],
+        conf["trunk_hidden_layers"],
+        conf["output_neurons"],
+        conf["N_outputs"],
+        device,
     )
+
     # Load the state dictionary
-    if conf.pretrained_model_path is None:
+    if conf["pretrained_model_path"] is None:
         prev_train_loss = None
         prev_test_loss = None
     else:
-        absolute_path = get_project_path(conf.path_to_state_dict)
-        state_dict = torch.load(absolute_path, map_location=conf.device)
+        absolute_path = get_project_path(model_path)
+        state_dict = torch.load(absolute_path, map_location=device)
         deeponet.load_state_dict(state_dict)
-        prev_losses = np.load(conf.pretrained_model_path.replace(".pth", "_losses.npz"))
+        prev_losses = np.load(
+            conf["pretrained_model_path"].replace(".pth", "_losses.npz")
+        )
         prev_train_loss = prev_losses["train_loss"]
         prev_test_loss = prev_losses["test_loss"]
 
