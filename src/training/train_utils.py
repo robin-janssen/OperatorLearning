@@ -163,6 +163,8 @@ def save_model(
 
     # Append the train time to the hyperparameters
     hyperparameters["train_duration"] = training_duration
+    del hyperparameters["data_loader"]
+    del hyperparameters["test_loader"]
 
     # Save hyperparameters as a YAML file
     hyperparameters_path = os.path.join(model_dir, f"{model_name}.yaml")

@@ -31,9 +31,8 @@ def run(args):
     )
 
     # For now: Use only a subset of the data
-    train_data = train_data[:100]
-    test_data = test_data[:100]
-
+    train_data = train_data[:2000]
+    test_data = test_data[:200]
     # train_data[:, 0, 3]
 
     timesteps = train_data[0, :, 1]
@@ -57,16 +56,17 @@ def run(args):
         plot_chemicals_comparative(train_data, num_chemicals=20)
 
     dataloader_train = create_dataloader_chemicals(
-        train_data, timesteps, fraction=1, batch_size=32, shuffle=True
+        train_data, timesteps, fraction=1, batch_size=128, shuffle=True
     )
 
     dataloader_test = create_dataloader_chemicals(
-        test_data, timesteps, fraction=1, batch_size=32, shuffle=False
+        test_data, timesteps, fraction=1, batch_size=128, shuffle=False
     )
 
     config = PChemicalTrainConfig(
         data_loader=dataloader_train, test_loader=dataloader_test
     )
+    config.device = args.device
 
     multionet, train_loss, test_loss = train_multionet_chemical(config)
 

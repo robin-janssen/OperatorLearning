@@ -4,7 +4,48 @@ import sys
 from pathlib import Path
 
 
-def run_script(file_path, args):
+def run_script(args):
+    """
+    Dynamically import a script based on its file path or module path and run its `run` function with provided arguments.
+    Handles both absolute/relative file paths and module-like paths.
+
+    :param args: Namespace of arguments including the script path.
+    """
+    # Extract the script path from the provided arguments
+    script_path = args.script
+
+    # Check if the script_path is a module path (contains dots but no slashes)
+    if "." in script_path and not any(sep in script_path for sep in ("/", "\\")):
+        # It's a module path; we directly use it
+        module_name, function_name = script_path.rsplit(".", 1)
+    else:
+        # It's a file path; we convert it to a module path
+        file_path = Path(script_path).resolve()
+
+        # Determine the root path (src directory) relative to this script
+        root_path = Path(__file__).resolve().parent
+
+        # Calculate the relative module path
+        try:
+            relative_module_path = file_path.relative_to(root_path).with_suffix("")
+        except ValueError as e:
+            print(f"Error: {e}")
+            sys.exit(1)
+
+        # Convert file path to module path format
+        module_path = str(relative_module_path).replace("/", ".").replace("\\", ".")
+        module_name, function_name = f"{module_path}.run".rsplit(".", 1)
+
+    try:
+        module = importlib.import_module(module_name)
+        function_to_run = getattr(module, function_name)
+        function_to_run(args)
+    except (ImportError, AttributeError) as e:
+        print(f"Error importing or running the script: {e}")
+        sys.exit(1)
+
+
+def run_script_2(args):
     """
     Dynamically import a script based on its file path and run its `run` function with provided arguments.
     Handles both absolute and relative file paths.
@@ -13,6 +54,7 @@ def run_script(file_path, args):
     :param args: Parsed arguments to pass to the script's `run` function.
     """
     # Resolve the absolute path from the provided file path
+    file_path = args.script
     print(sys.argv)
     script_path = Path(file_path).resolve()
 
@@ -51,7 +93,7 @@ def main():
         "--script",
         type=str,
         # default="multionet_scripts.multionet_deeponet_comparison.run",
-        default="multionet_scripts.multionet_chemical_DEns.run",
+        default="multionet_scripts.multionet_pchemicals_tests.run",
         # default="multionet_scripts.multionet_spectra_fc.run",
         help="Path to the script to run, e.g., 'deeponet_scripts.deeponet_training.run'",
     )
@@ -142,7 +184,7 @@ def main():
     parser.add_argument(
         "--device",
         type=str,
-        default="mps",
+        default="cuda:0",
         choices=["cpu", "mps", "cuda"],
         help="Device to use for training.",
     )
@@ -155,7 +197,7 @@ def main():
     )
 
     args = parser.parse_args()
-    run_script(args.script, args)
+    run_script(args)
 
 
 if __name__ == "__main__":
