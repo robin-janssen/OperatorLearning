@@ -1,5 +1,10 @@
 from .osu_chemicals import load_chemical_data
-from .data_utils import rbf_kernel, numerical_integration
+from .priestley_chemicals import (
+    load_chemicals_priestley,
+    load_and_save_chemicals_priestley,
+)
+from .spectral_data import load_fc_spectra
+from .data_utils import rbf_kernel, numerical_integration, train_test_split
 from .datagen import (
     generate_polynomial_data,
     generate_polynomial_data_coeff,
@@ -23,8 +28,12 @@ from .dataloader import (
 
 __all__ = [
     "load_chemical_data",
+    "load_chemicals_priestley",
+    "load_and_save_chemicals_priestley",
+    "load_fc_spectra",
     "rbf_kernel",
     "numerical_integration",
+    "train_test_split",
     "generate_polynomial_data",
     "generate_polynomial_data_coeff",
     "generate_decaying_sines",

@@ -2,6 +2,7 @@ import functools
 import time
 import os
 import yaml
+import dataclasses
 
 import numpy as np
 import torch
@@ -91,7 +92,7 @@ def time_execution(func):
     return wrapper
 
 
-def save_model(
+def save_model_2(
     model: OperatorNetworkType,
     model_name,
     hyperparameters,
@@ -113,6 +114,55 @@ def save_model(
     # Save the model state dict
     model_path = os.path.join(model_dir, f"{model_name}.pth")
     torch.save(model.state_dict(), model_path)
+
+    # Save hyperparameters as a YAML file
+    hyperparameters_path = os.path.join(model_dir, f"{model_name}.yaml")
+    with open(hyperparameters_path, "w") as file:
+        yaml.dump(hyperparameters, file)
+
+    if train_loss is not None and test_loss is not None:
+        # Save the losses as a numpy file
+        losses_path = os.path.join(model_dir, f"{model_name}_losses.npz")
+        np.savez(losses_path, train_loss=train_loss, test_loss=test_loss)
+
+    print(f"Model, losses and hyperparameters saved to {model_dir}")
+
+
+def save_model(
+    model: OperatorNetworkType,
+    model_name,
+    config,
+    subfolder="models",
+    train_loss: np.ndarray | None = None,
+    test_loss: np.ndarray | None = None,
+    training_duration: float | None = None,
+):
+    """
+    Save the trained model and hyperparameters.
+
+    Args:
+        model: The trained model.
+        model_name: The name of the model.
+        config: Dictionary containing hyperparameters.
+        subfolder: The subfolder to save the model in.
+        train_loss: The training loss history.
+        test_loss: The testing loss history.
+        training_duration: The duration of the training.
+
+    """
+    # Create a directory based on the current date
+    base_dir = os.path.dirname(os.path.realpath(__file__))
+    model_dir = create_date_based_directory(base_dir, subfolder)
+
+    # Save the model state dict
+    model_path = os.path.join(model_dir, f"{model_name}.pth")
+    torch.save(model.state_dict(), model_path)
+
+    # Create the hyperparameters dictionary from the config dataclass
+    hyperparameters = dataclasses.asdict(config)
+
+    # Append the train time to the hyperparameters
+    hyperparameters["train_duration"] = training_duration
 
     # Save hyperparameters as a YAML file
     hyperparameters_path = os.path.join(model_dir, f"{model_name}.yaml")

@@ -1,3 +1,5 @@
+from .config_classes import PChemicalTrainConfig
+
 from .train_deeponet import (
     train_deeponet,
     train_deeponet_visualized,
@@ -22,6 +24,7 @@ from .train_utils import (
 )
 
 __all__ = [
+    "PChemicalTrainConfig",
     "train_deeponet",
     "train_deeponet_visualized",
     "test_deeponet",

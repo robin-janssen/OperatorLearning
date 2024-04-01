@@ -3,6 +3,7 @@ from __future__ import annotations
 import numpy as np
 from tqdm import tqdm
 import optuna
+from dataclasses import dataclass
 
 import torch
 import torch.nn as nn
@@ -309,8 +310,157 @@ def train_multionet_poly_values(
         return deeponet, train_loss_history
 
 
+def training_step(model, data_loader, criterion, optimizer, device, N_outputs):
+    model.train()
+    total_loss = 0
+    dataset_size = len(data_loader.dataset)
+    for branch_inputs, trunk_inputs, targets in data_loader:
+        branch_inputs, trunk_inputs, targets = (
+            branch_inputs.to(device),
+            trunk_inputs.to(device),
+            targets.to(device),
+        )
+
+        optimizer.zero_grad()
+        outputs = model(branch_inputs, trunk_inputs)
+        loss = criterion(outputs, targets)
+        loss.backward()
+        optimizer.step()
+
+        total_loss += loss.item()
+        total_loss /= dataset_size * N_outputs
+    return total_loss
+
+
+def test_step(model, test_loader, criterion, device):
+    model.eval()
+    total_loss = 0
+    with torch.no_grad():
+        for branch_inputs, trunk_inputs, targets in test_loader:
+            branch_inputs, trunk_inputs, targets = (
+                branch_inputs.to(device),
+                trunk_inputs.to(device),
+                targets.to(device),
+            )
+            outputs = model(branch_inputs, trunk_inputs)
+            loss = criterion(outputs, targets)
+            total_loss += loss.item()
+    return total_loss / len(test_loader.dataset)
+
+
+def setup_criterion(conf):
+    crit = nn.MSELoss(reduction="sum")
+    if conf.masses is not None:
+        weights = (1.0, conf.massloss_factor)
+        crit = mass_conservation_loss(conf.masses, crit, weights, conf.device)
+    return crit
+
+
+def setup_optimizer_and_scheduler(conf, deeponet):
+    optimizer = optim.Adam(
+        deeponet.parameters(),
+        lr=conf.learning_rate,
+        weight_decay=conf.regularization_factor,
+    )
+    if conf.schedule:
+        scheduler = optim.lr_scheduler.LinearLR(
+            optimizer, start_factor=1, end_factor=0.3, total_iters=conf.num_epochs
+        )
+    else:
+        scheduler = optim.lr_scheduler.LinearLR(
+            optimizer, start_factor=1, end_factor=1, total_iters=conf.num_epochs
+        )
+    return optimizer, scheduler
+
+
 @time_execution
 def train_multionet_chemical(
+    conf: type[dataclass],
+) -> tuple:
+    """Train a DeepONet model.
+    The function instantiates a DeepONet model (with multiple outputs) and trains it using the provided DataLoader.
+    Note that it assumes equal number of neurons in each hidden layer of the branch and trunk networks.
+
+    Args:
+        conf (type[dataclass]): A dataclass object containing the training configuration. It should have the following attributes:
+            - 'data_loader' (DataLoader): DataLoader for the training data.
+            - 'masses' (List[float] | None): List of masses for the chemical species. If None, no mass conservation loss will be used.
+            - 'branch_input_size' (int): Input size for the branch network.
+            - 'trunk_input_size' (int): Input size for the trunk network.
+            - 'hidden_size' (int): Number of hidden units in each layer.
+            - 'branch_hidden_layers' (int): Number of hidden layers in the branch network.
+            - 'trunk_hidden_layers' (int): Number of hidden layers in the trunk network.
+            - 'output_size' (int): Number of neurons in the last layer.
+            - 'N_outputs' (int): Number of outputs.
+            - 'num_epochs' (int): Number of epochs to train for.
+            - 'learning_rate' (float): Learning rate for the optimizer.
+            - 'schedule' (bool): Whether to use a learning rate schedule.
+            - 'test_loader' (DataLoader | None): DataLoader for the test data. None if testing is not performed.
+            - 'N_sensors' (int): Number of sensor locations.
+            - 'N_timesteps' (int): Number of timesteps.
+            - 'architecture' (str): Architecture type, e.g., 'both', 'branch', or 'trunk'.
+            - 'pretrained_model_path' (str | None): Path to a pretrained model. None if training from scratch.
+            - 'device' (str): The device to use for training, e.g., 'cpu', 'cuda:0'.
+            - 'use_streamlit' (bool): Whether to use Streamlit for live visualizations.
+            - 'optuna_trial' (optuna.Trial | None): Optuna trial object for hyperparameter optimization. None if not using Optuna.
+            - 'regularization_factor' (float): Regularization factor for the loss function.
+            - 'massloss_factor' (float): Weight of the mass conservation loss component.
+
+    :return: Trained DeepONet model and loss history.
+    """
+    device = torch.device(conf.device)
+
+    deeponet, prev_train_loss, prev_test_loss = load_multionet(conf)
+
+    criterion = setup_criterion(conf)
+
+    optimizer, scheduler = setup_optimizer_and_scheduler(conf, deeponet)
+
+    if conf.pretrained_model_path is None:
+        train_loss_hist = np.zeros(conf.num_epochs)
+        test_loss_hist = np.zeros(conf.num_epochs)
+    else:
+        train_loss_hist = np.concatenate((prev_train_loss, np.zeros(conf.num_epochs)))
+        test_loss_hist = np.concatenate((prev_test_loss, np.zeros(conf.num_epochs)))
+    output_hist = np.zeros((conf.num_epochs, 3, conf.N_sensors, conf.N_timesteps))
+
+    progress_bar = tqdm(range(conf.num_epochs), desc="Training Progress")
+    for epoch in progress_bar:
+        train_loss_hist[epoch] = training_step(
+            deeponet, conf.data_loader, criterion, optimizer, device, conf.N_outputs
+        )
+        if conf.optuna_trial is not None:
+            conf.optuna_trial.report(train_loss_hist[epoch], epoch)
+            if conf.optuna_trial.should_prune():
+                raise optuna.TrialPruned()
+        clr = optimizer.param_groups[0]["lr"]
+        progress_bar.set_postfix({"loss": train_loss_hist[epoch], "lr": clr})
+        scheduler.step()
+        if conf.test_loader is not None:
+            test_loss_hist[epoch], outputs, targets = test_deeponet(
+                deeponet, conf.test_loader, device, criterion, conf.N_timesteps
+            )
+            output_hist[epoch] = outputs[:3]
+            if epoch == 0:
+                targets_vis = targets[:3]
+
+        if conf.use_streamlit:
+            streamlit_visualization_history(
+                train_loss_hist[: epoch + 1],
+                test_loss_hist[: epoch + 1],
+                output_hist,
+                targets_vis,
+                epoch,
+            )
+
+    if conf.test_loader is None:
+        test_loss_hist = None
+
+    return deeponet, train_loss_hist, test_loss_hist
+
+
+@time_execution
+def train_multionet_chemical_2(
     data_loader: DataLoader,
     masses: list | None = None,
     branch_input_size: int = 101,
@@ -926,6 +1076,62 @@ def test_multionet_polynomial_old(
 
 
 def load_multionet(
+    conf: type[dataclass],
+) -> OperatorNetworkType | tuple:
+    """
+    Load a DeepONet model from a saved state dictionary.
+    If the path_to_state_dict is None, the function will return a new MultiONet model.
+
+    Args:
+        conf (type[dataclass]): A dataclass object containing the training configuration. It should have the following attributes:
+            - 'pretrained_model_path' (str): Path to the saved state dictionary.
+            - 'branch_input_size' (int): Input size for the branch network.
+            - 'trunk_input_size' (int): Input size for the trunk network.
+            - 'hidden_size' (int): Number of hidden units in each layer.
+            - 'branch_hidden_layers' (int): Number of hidden layers in the branch network.
+            - 'trunk_hidden_layers' (int): Number of hidden layers in the trunk network.
+            - 'output_neurons' (int): Number of neurons in the last layer.
+            - 'N_outputs' (int): Number of outputs.
+            - 'architecture' (str): Architecture type, e.g., 'both', 'branch', or 'trunk'.
+            - 'device' (str): The device to use for training, e.g., 'cpu', 'cuda:0'.
+
+    Returns:
+        deeponet: Loaded DeepONet model.
+    """
+    # Instantiate the model
+    if conf.architecture == "both":
+        model = MultiONet
+    elif conf.architecture == "branch":
+        model = MultiONetB
+    elif conf.architecture == "trunk":
+        model = MultiONetT
+    deeponet = model(
+        conf.branch_input_size,
+        conf.hidden_size,
+        conf.branch_hidden_layers,
+        conf.trunk_input_size,
+        conf.hidden_size,
+        conf.trunk_hidden_layers,
+        conf.output_neurons,
+        conf.N_outputs,
+        conf.device,
+    )
+    # Load the state dictionary
+    if conf.pretrained_model_path is None:
+        prev_train_loss = None
+        prev_test_loss = None
+    else:
+        absolute_path = get_project_path(conf.path_to_state_dict)
+        state_dict = torch.load(absolute_path, map_location=conf.device)
+        deeponet.load_state_dict(state_dict)
+        prev_losses = np.load(conf.pretrained_model_path.replace(".pth", "_losses.npz"))
+        prev_train_loss = prev_losses["train_loss"]
+        prev_test_loss = prev_losses["test_loss"]
+
+    return deeponet, prev_train_loss, prev_test_loss
+
+
+def load_multionet_2(
     path_to_state_dict: str,
     branch_input_size: int,
     trunk_input_size: int,

@@ -224,6 +224,7 @@ def test_deeponet(
     data_loader: DataLoader,
     device="cpu",
     criterion=nn.MSELoss(reduction="sum"),
+    N_timesteps=101,
     timing=False,
 ) -> tuple:
     """
@@ -247,11 +248,11 @@ def test_deeponet(
     # Make sure the buffers have the correct shape for broadcasting
     if len(example_targets.size()) == 1:
         targetsize = 1
-        predictions_buffer = np.empty(dataset_size)
+        preds_buffer = np.empty(dataset_size)
         targets_buffer = np.empty(dataset_size)
     else:
         targetsize = example_targets.size(1)
-        predictions_buffer = np.empty((dataset_size, targetsize))
+        preds_buffer = np.empty((dataset_size, targetsize))
         targets_buffer = np.empty((dataset_size, targetsize))
 
     buffer_index = 0
@@ -270,7 +271,7 @@ def test_deeponet(
 
             # Store predictions in the buffer
             num_predictions = len(outputs)
-            predictions_buffer[buffer_index : buffer_index + num_predictions] = (
+            preds_buffer[buffer_index : buffer_index + num_predictions] = (
                 outputs.cpu().numpy()
             )
             targets_buffer[buffer_index : buffer_index + num_predictions] = (
@@ -288,7 +289,13 @@ def test_deeponet(
     # Calculate relative error
     total_loss /= dataset_size * targetsize
 
-    return total_loss, predictions_buffer, targets_buffer
+    preds_buffer = preds_buffer.reshape(-1, N_timesteps, preds_buffer.shape[1])
+    preds_buffer = preds_buffer.transpose(0, 2, 1)
+
+    targets_buffer = targets_buffer.reshape(-1, N_timesteps, targets_buffer.shape[1])
+    targets_buffer = targets_buffer.transpose(0, 2, 1)
+
+    return total_loss, preds_buffer, targets_buffer
 
 
 def load_deeponet(

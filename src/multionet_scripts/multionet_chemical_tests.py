@@ -44,7 +44,7 @@ def run(args):
     massloss_factor = 0.013
 
     if USE_MASS_CONSERVATION:
-        from data import masses
+        from data.osu_chemicals import masses
     else:
         masses = None
 
@@ -99,7 +99,7 @@ def run(args):
             architecture=architecture,
             pretrained_model_path=pretrained_model_path,
             device=device,
-            visualize=False,
+            use_streamlit=False,
             regularization_factor=regularization_factor,
             massloss_factor=massloss_factor,
         )

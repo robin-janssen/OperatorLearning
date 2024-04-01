@@ -17,7 +17,7 @@ from training import (
 from data import load_chemical_data, create_dataloader_chemicals
 
 
-if __name__ == "__main__":
+def run(args):
 
     TRAIN = False
     VIS = False
@@ -37,7 +37,7 @@ if __name__ == "__main__":
     device = "mps"  # "cpu", "mps"
 
     if USE_MASS_CONSERVATION:
-        from data import masses
+        from data.osu_chemicals import masses
     else:
         masses = None
 
@@ -153,3 +153,7 @@ if __name__ == "__main__":
     )
 
     # Plot average
+
+
+if __name__ == "__main__":
+    run()

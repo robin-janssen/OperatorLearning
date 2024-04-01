@@ -2,7 +2,6 @@
 
 import multiprocessing
 import numpy as np
-import torch
 
 from data import create_dataloader_chemicals, load_chemical_data
 from training import (

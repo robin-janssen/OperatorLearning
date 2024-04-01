@@ -742,17 +742,19 @@ def streamlit_visualization_history(
 
 
 def plot_chemical_examples(
-    data: np.array, names: list[str], num_chemicals: int | None = None
+    data: np.array, names: list[str] | None = None, num_chemicals: int | None = None
 ) -> None:
     """Creates four exemplary plots, displaying the amount of each chemical over time.
 
     :param data: 3D numpy array with the chemical data.
-    :param names: List of strings with the names of the chemicals.
+    :param names: Optional list of strings with the names of the chemicals.
     :param num_chemicals: Number of chemicals to display. If None, all chemicals are displayed.
     :return: None
     """
     if num_chemicals is None:
         num_chemicals = data.shape[2]
+    if names is None:
+        names = [f"Chem {i+1}" for i in range(num_chemicals)]
     plt.subplots(2, 2, figsize=(10, 10))
     for j in range(4):
         for i in range(num_chemicals):
@@ -765,18 +767,22 @@ def plot_chemical_examples(
 
 
 def plot_chemicals_comparative(
-    data: np.array, names: list[str], num_examples: int = 10
+    data: np.array, names: list[str] | None = None, num_chemicals: int | None = None
 ) -> None:
     """Creates four plots, displaying the evolution of four chemicals over time.
 
     :param data: 3D numpy array with the chemical data.
-    :param names: List of strings with the names of the chemicals.
+    :param names: Optional list of strings with the names of the chemicals.
     :param num_examples: Number of examples to display for each chemical.
     """
+    if num_chemicals is None:
+        num_chemicals = data.shape[2]
+    if names is None:
+        names = [f"Chem {i+1}" for i in range(data.shape[2])]
     plt.subplots(2, 2, figsize=(10, 10))
     for j in range(4):
         plt.subplot(2, 2, j + 1)
-        for i in range(num_examples):
+        for i in range(num_chemicals):
             plt.plot(data[i, :, 3 * j], label=f"{names[3 * j]}")
         plt.xlabel("Timestep")
         plt.ylabel("Amount")
@@ -1104,52 +1110,6 @@ def plot_mass_conservation(ground_truth, masses, num_examples=5):
     plt.show()
 
 
-def visualise_deep_ensemble_2(
-    predictions_list: list[np.array], ground_truth: np.array, num_chemicals: int
-):
-    """
-    Visualize the predictions of a deep ensemble and the ground truth.
-
-    :param predictions_list: List of arrays with shape [N_datapoints, N_timesteps, N_chemicals]
-    :param ground_truth: Array of shape [N_datapoints, N_timesteps, N_chemicals]
-    :param num_chemicals: Number of chemicals to plot
-    """
-    # Calculate the average prediction and standard deviation
-    stacked_predictions = np.stack(predictions_list, axis=0)
-    mean_predictions = np.mean(stacked_predictions, axis=0)
-    std_predictions = np.std(stacked_predictions, axis=0)
-
-    fig, axs = plt.subplots(2, 2, figsize=(10, 10), sharex=True, sharey=True)
-    colors = plt.cm.viridis(np.linspace(0, 1, num_chemicals))
-
-    for i, ax in enumerate(axs):
-        for j in range(num_chemicals):
-            # Ground truth
-            ax.plot(
-                ground_truth[i, :, j],
-                color=colors[j],
-                label=f"Chemical {j+1}" if i == 0 else "",
-            )
-
-            # Mean prediction
-            ax.plot(mean_predictions[i, :, j], "--", color=colors[j])
-
-            # Predictive uncertainty (1, 2, 3 sigma)
-            for sigma in [1, 2, 3]:
-                ax.fill_between(
-                    range(mean_predictions.shape[1]),
-                    mean_predictions[i, :, j] - sigma * std_predictions[i, :, j],
-                    mean_predictions[i, :, j] + sigma * std_predictions[i, :, j],
-                    color=colors[j],
-                    alpha=0.5 / sigma,
-                )
-
-    axs[0].legend()
-    fig.suptitle("Deep Ensemble Predictions and Ground Truth")
-    plt.tight_layout()
-    plt.show()
-
-
 def visualise_deep_ensemble(
     predictions_list, ground_truth, num_chemicals, chemical_names
 ):
@@ -1176,6 +1136,8 @@ def visualise_deep_ensemble(
     for datapoint_idx in range(4):  # Assuming four subplots
         ax = axs[datapoint_idx // 2, datapoint_idx % 2]
         for chem_idx in range(num_chemicals):
+            idx_factor = 2  # Just to select different chemicals
+            chem_idx = chem_idx * idx_factor
             gt = ground_truth[:, :, chem_idx]
             mean = prediction_mean[:, :, chem_idx]
             std = prediction_std[:, :, chem_idx]
@@ -1184,14 +1146,14 @@ def visualise_deep_ensemble(
             ax.plot(
                 timesteps,
                 gt[datapoint_idx],
-                color=colors[chem_idx],
+                color=colors[chem_idx // idx_factor],
                 label=f"GT {chemical_names[chem_idx]}",
             )
             ax.plot(
                 timesteps,
                 mean[datapoint_idx],
                 "--",
-                color=colors[chem_idx],
+                color=colors[chem_idx // idx_factor],
                 label=f"Pred Chem {chemical_names[chem_idx]}",
             )
 
@@ -1201,7 +1163,7 @@ def visualise_deep_ensemble(
                     timesteps,
                     mean[datapoint_idx] - sigma_multiplier * std[datapoint_idx],
                     mean[datapoint_idx] + sigma_multiplier * std[datapoint_idx],
-                    color=colors[chem_idx],
+                    color=colors[chem_idx // idx_factor],
                     alpha=0.5 / sigma_multiplier,
                 )
 

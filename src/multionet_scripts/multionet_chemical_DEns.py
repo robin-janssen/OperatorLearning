@@ -90,7 +90,7 @@ def deep_ensemble_losses(losses):
 
 
 def run(args):
-    directory = "models/03-32/"
+    directory = "models/03-29/"
     directory = os.path.join(os.getcwd(), directory)
     models, configs, losses = load_model_and_losses(directory)
 
@@ -104,6 +104,8 @@ def run(args):
     )
 
     losses_val_list, losses_label_list = deep_ensemble_losses(losses)
+    losses_val_list = losses_val_list[::2]  # Only take the train losses
+    losses_label_list = losses_label_list[::2]  # Only take the train losses
 
     plot_losses(
         losses_val_list, losses_label_list, "Losses (MultiONet Ensemble for Chemicals)"
@@ -113,11 +115,12 @@ def run(args):
         models, configs, dataloader_test
     )
 
+    extracted_chemicals = chemicals.split(", ")
     visualise_deep_ensemble(
         preds_list,
         targets,
-        num_chemicals=5,
-        chemical_names=chemicals,
+        num_chemicals=7,
+        chemical_names=extracted_chemicals,
     )
 
     print("Done!")
