@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 from typing import Optional
-from torch.utils.data import DataLoader
 from optuna import Trial
 
 
@@ -15,7 +14,7 @@ class PChemicalTrainConfig:
     output_neurons: int = 2160
     N_outputs: int = 216
     num_epochs: int = 20
-    learning_rate: float = 3e-5
+    learning_rate: float = 1e-5
     schedule: bool = False
     N_sensors: int = 216
     N_timesteps: int = 128

@@ -34,7 +34,7 @@ def run(args):
     )
 
     # For now: Use only a subset of the data
-    train_data = train_data[:200]
+    train_data = train_data[:1000]
     test_data = test_data[:200]
     # train_data[:, 0, 3]
 

@@ -375,7 +375,7 @@ def setup_optimizer_and_scheduler(conf, deeponet):
 
 @time_execution
 def train_multionet_chemical(
-    conf: type[dataclass],
+    conf: type[dataclasses.dataclass],
     data_loader: DataLoader,
     test_loader: DataLoader = None,
 ) -> tuple:
