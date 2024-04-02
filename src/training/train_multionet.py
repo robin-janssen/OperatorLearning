@@ -377,6 +377,8 @@ def setup_optimizer_and_scheduler(conf, deeponet):
 @time_execution
 def train_multionet_chemical(
     conf: type[dataclass],
+    data_loader: DataLoader,
+    test_loader: DataLoader = None,
 ) -> tuple:
     """Train a DeepONet model.
     The function instantiates a DeepONet model (with multiple outputs) and trains it using the provided DataLoader.
@@ -384,7 +386,6 @@ def train_multionet_chemical(
 
     Args:
         conf (type[dataclass]): A dataclass object containing the training configuration. It should have the following attributes:
-            - 'data_loader' (DataLoader): DataLoader for the training data.
             - 'masses' (List[float] | None): List of masses for the chemical species. If None, no mass conservation loss will be used.
             - 'branch_input_size' (int): Input size for the branch network.
             - 'trunk_input_size' (int): Input size for the trunk network.
@@ -396,7 +397,6 @@ def train_multionet_chemical(
             - 'num_epochs' (int): Number of epochs to train for.
             - 'learning_rate' (float): Learning rate for the optimizer.
             - 'schedule' (bool): Whether to use a learning rate schedule.
-            - 'test_loader' (DataLoader | None): DataLoader for the test data. None if testing is not performed.
             - 'N_sensors' (int): Number of sensor locations.
             - 'N_timesteps' (int): Number of timesteps.
             - 'architecture' (str): Architecture type, e.g., 'both', 'branch', or 'trunk'.
@@ -406,6 +406,8 @@ def train_multionet_chemical(
             - 'optuna_trial' (optuna.Trial | None): Optuna trial object for hyperparameter optimization. None if not using Optuna.
             - 'regularization_factor' (float): Regularization factor for the loss function.
             - 'massloss_factor' (float): Weight of the mass conservation loss component.
+        data_loader (DataLoader): A DataLoader object containing the training data.
+        test_loader (DataLoader): A DataLoader object containing the test data.
 
     :return: Trained DeepONet model and loss history.
     """
@@ -428,7 +430,7 @@ def train_multionet_chemical(
     progress_bar = tqdm(range(conf.num_epochs), desc="Training Progress")
     for epoch in progress_bar:
         train_loss_hist[epoch] = training_step(
-            deeponet, conf.data_loader, criterion, optimizer, device, conf.N_outputs
+            deeponet, data_loader, criterion, optimizer, device, conf.N_outputs
         )
         if conf.optuna_trial is not None:
             conf.optuna_trial.report(train_loss_hist[epoch], epoch)
@@ -437,9 +439,9 @@ def train_multionet_chemical(
         clr = optimizer.param_groups[0]["lr"]
         progress_bar.set_postfix({"loss": train_loss_hist[epoch], "lr": clr})
         scheduler.step()
-        if conf.test_loader is not None:
+        if test_loader is not None:
             test_loss_hist[epoch], outputs, targets = test_deeponet(
-                deeponet, conf.test_loader, device, criterion, conf.N_timesteps
+                deeponet, test_loader, device, criterion, conf.N_timesteps
             )
             output_hist[epoch] = outputs[:3]
             if epoch == 0:
@@ -454,7 +456,7 @@ def train_multionet_chemical(
                 epoch,
             )
 
-    if conf.test_loader is None:
+    if test_loader is None:
         test_loss_hist = None
 
     return deeponet, train_loss_hist, test_loss_hist

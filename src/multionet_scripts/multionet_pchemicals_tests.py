@@ -21,6 +21,9 @@ from plotting import (
 
 def run(args):
 
+    config = PChemicalTrainConfig()
+    config.device = args.device
+
     data_folder = "data/chemicals_priestley"
 
     # Loading from the numpy array
@@ -31,11 +34,12 @@ def run(args):
     )
 
     # For now: Use only a subset of the data
-    train_data = train_data[:2000]
+    train_data = train_data[:200]
     test_data = test_data[:200]
     # train_data[:, 0, 3]
 
-    timesteps = train_data[0, :, 1]
+    timesteps = train_data[0, :, 0]
+    timesteps = np.log10(timesteps)
     train_data = np.where(train_data == 0, 1e-10, train_data)
     test_data = np.where(test_data == 0, 1e-10, test_data)
     train_data = np.log10(train_data[:, :, 1:])
@@ -56,19 +60,16 @@ def run(args):
         plot_chemicals_comparative(train_data, num_chemicals=20)
 
     dataloader_train = create_dataloader_chemicals(
-        train_data, timesteps, fraction=1, batch_size=128, shuffle=True
+        train_data, timesteps, fraction=1, batch_size=config.batch_size, shuffle=True
     )
 
     dataloader_test = create_dataloader_chemicals(
-        test_data, timesteps, fraction=1, batch_size=128, shuffle=False
+        test_data, timesteps, fraction=1, batch_size=config.batch_size, shuffle=False
     )
 
-    config = PChemicalTrainConfig(
-        data_loader=dataloader_train, test_loader=dataloader_test
+    multionet, train_loss, test_loss = train_multionet_chemical(
+        config, dataloader_train, dataloader_test
     )
-    config.device = args.device
-
-    multionet, train_loss, test_loss = train_multionet_chemical(config)
 
     # Save the MulitONet
     save_model(
