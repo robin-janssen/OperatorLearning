@@ -179,6 +179,7 @@ def create_dataloader_chemicals(
     fraction=1,
     batch_size=32,
     shuffle=False,
+    normalize=False,
 ):
     """
     Create a DataLoader with optional fractional subsampling for chemical evolution data for DeepONet.
@@ -215,6 +216,15 @@ def create_dataloader_chemicals(
     branch_inputs_tensor = torch.tensor(np.array(branch_inputs), dtype=torch.float32)
     trunk_inputs_tensor = torch.tensor(np.array(trunk_inputs), dtype=torch.float32)
     targets_tensor = torch.tensor(np.array(targets), dtype=torch.float32)
+
+    if normalize:
+        branch_inputs_tensor = (
+            branch_inputs_tensor - branch_inputs_tensor.mean()
+        ) / branch_inputs_tensor.std()
+        trunk_inputs_tensor = (
+            trunk_inputs_tensor - trunk_inputs_tensor.mean()
+        ) / trunk_inputs_tensor.std()
+        targets_tensor = (targets_tensor - targets_tensor.mean()) / targets_tensor.std()
 
     # Create a TensorDataset and DataLoader
     dataset = TensorDataset(branch_inputs_tensor, trunk_inputs_tensor, targets_tensor)

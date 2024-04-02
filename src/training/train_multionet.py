@@ -4,7 +4,6 @@ import numpy as np
 from tqdm import tqdm
 import optuna
 import dataclasses
-from dataclasses import dataclass
 
 import torch
 import torch.nn as nn
@@ -376,7 +375,7 @@ def setup_optimizer_and_scheduler(conf, deeponet):
 
 @time_execution
 def train_multionet_chemical(
-    conf: type[dataclass],
+    conf: type[dataclasses.dataclass],
 ) -> tuple:
     """Train a DeepONet model.
     The function instantiates a DeepONet model (with multiple outputs) and trains it using the provided DataLoader.
@@ -411,7 +410,7 @@ def train_multionet_chemical(
     """
     device = torch.device(conf.device)
 
-    deeponet, prev_train_loss, prev_test_loss = load_multionet(conf)
+    deeponet, prev_train_loss, prev_test_loss = load_multionet(conf, device)
 
     criterion = setup_criterion(conf)
 
@@ -1077,7 +1076,7 @@ def test_multionet_polynomial_old(
 
 
 def load_multionet(
-    conf: type[dataclass] | dict,
+    conf: type[dataclasses.dataclass] | dict,
     device: str = "cpu",
     model_path: str | None = None,
 ) -> OperatorNetworkType | tuple:
@@ -1102,9 +1101,8 @@ def load_multionet(
         deeponet: Loaded DeepONet model.
     """
     # If the conf is a dataclass, convert it to a dictionary
-    # if isinstance(conf, dataclasses.dataclass):
-    #     conf = dataclasses.asdict(conf)
-    # Instantiate the model
+    if dataclasses.is_dataclass(conf):
+        conf = dataclasses.asdict(conf)
     # Instantiate the model
     if conf["architecture"] == "both":
         model = MultiONet

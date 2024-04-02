@@ -31,27 +31,28 @@ def run(args):
     )
 
     # For now: Use only a subset of the data
-    train_data = train_data[:2000]
+    train_data = train_data[:200]
     test_data = test_data[:200]
     # train_data[:, 0, 3]
 
-    timesteps = train_data[0, :, 1]
+    timesteps = train_data[0, :, 0]
+    timesteps = np.log10(timesteps)
     train_data = np.where(train_data == 0, 1e-10, train_data)
     test_data = np.where(test_data == 0, 1e-10, test_data)
     train_data = np.log10(train_data[:, :, 1:])
     test_data = np.log10(test_data[:, :, 1:])
 
-    # data_transformed = np.where(
-    #     np.isnan(train_data), 2, np.where(train_data == -np.inf, 1, 0)
-    # )
-    data_transformed = train_data
-    # Plotting the first channel with colorbar
-    fig, ax = plt.subplots()
-    im = ax.imshow(data_transformed[1, :, :].T, aspect="auto")
-    plt.colorbar(im, ax=ax)  # Add a colorbar to the current plot
-    plt.show()
-
     if args.vis:
+        # data_transformed = np.where(
+        #     np.isnan(train_data), 2, np.where(train_data == -np.inf, 1, 0)
+        # )
+        data_transformed = train_data
+        # Plotting the first channel with colorbar
+        fig, ax = plt.subplots()
+        im = ax.imshow(data_transformed[1, :, :].T, aspect="auto")
+        plt.colorbar(im, ax=ax)  # Add a colorbar to the current plot
+        plt.show()
+
         plot_chemical_examples(train_data, num_chemicals=20)
         plot_chemicals_comparative(train_data, num_chemicals=20)
 

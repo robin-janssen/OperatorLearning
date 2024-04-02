@@ -31,9 +31,8 @@ def load_chemicals_priestley(data_folder):
             for timestep in range(n_timesteps):
                 for particle in range(n_particles_per_file):
                     line = file.readline().strip()
-                    # Use the correct delimiter here
                     data = list(map(float, line.split(",")))
-                    # Store the data, skipping the first element (time)
+                    # Store the data
                     full_data_array[index_offset + particle, timestep, :] = data
 
     return full_data_array

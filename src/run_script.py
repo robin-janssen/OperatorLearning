@@ -106,7 +106,7 @@ def main():
         help="Whether to train the model.",
     )
     parser.add_argument(
-        "--vis", action="store_true", default=True, help="Whether to visualize data."
+        "--vis", action="store_true", default=False, help="Whether to visualize data."
     )
     parser.add_argument(
         "--use_mass_conservation",
