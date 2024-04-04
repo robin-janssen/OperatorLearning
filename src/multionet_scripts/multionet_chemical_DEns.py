@@ -49,12 +49,16 @@ def deep_ensemble_uq(models, configs, dataloader):
     relative_errors_list = []
 
     for idx, (model, config) in enumerate(zip(models, configs)):
-        total_loss, preds, targets = test_deeponet(model, dataloader)
+        total_loss, preds, targets = test_deeponet(
+            model, dataloader, N_timesteps=config["N_timesteps"], device="cpu"
+        )
+        # preds = preds.transpose(0, 2, 1)
+        # targets = targets.transpose(0, 2, 1)
         print(f"Average prediction error (DeepONet {idx}): {total_loss:.3E}")
         N_outputs = config["N_outputs"]
         N_timesteps = config["N_timesteps"]
-        preds = preds.reshape(-1, N_timesteps, N_outputs)
-        targets = targets.reshape(-1, N_timesteps, N_outputs)
+        preds = preds.reshape(-1, N_outputs, N_timesteps)
+        targets = targets.reshape(-1, N_outputs, N_timesteps)
         errors = np.abs(preds - targets)
         relative_errors = errors / np.abs(targets)
 
@@ -80,7 +84,7 @@ def deep_ensemble_losses(losses):
 
 
 def run(args):
-    directory = "models/04-01/"
+    directory = "models/03-29/"
     directory = os.path.join(os.getcwd(), directory)
     models, configs, losses = load_model_and_losses(directory, args.device)
 

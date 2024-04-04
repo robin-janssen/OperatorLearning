@@ -1125,15 +1125,19 @@ def load_multionet(
     )
 
     # Load the state dictionary
-    if conf["pretrained_model_path"] is None:
+    if (
+        "pretrained_model_path" not in conf or conf["pretrained_model_path"] is None
+    ) and model_path is None:
         prev_train_loss = None
         prev_test_loss = None
     else:
+        if model_path is None:
+            model_path = conf["pretrained_model_path"]
         absolute_path = get_project_path(model_path)
         state_dict = torch.load(absolute_path, map_location=device)
         deeponet.load_state_dict(state_dict)
         prev_losses = np.load(
-            conf["pretrained_model_path"].replace(".pth", "_losses.npz")
+            model_path.replace(".pth", "_losses.npz")
         )
         prev_train_loss = prev_losses["train_loss"]
         prev_test_loss = prev_losses["test_loss"]

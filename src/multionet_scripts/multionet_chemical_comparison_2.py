@@ -72,18 +72,7 @@ def run(args):
         test_data, timesteps, fraction=1, batch_size=32, shuffle=False
     )
 
-    multionet_standard = load_multionet(
-        "models/02-28/multionet_chemical_500.pth",
-        branch_input_size,
-        trunk_input_size,
-        hidden_size,
-        branch_hidden_layers,
-        trunk_hidden_layers,
-        output_neurons,
-        N_outputs,
-        architecture="both",
-        device=device,
-    )
+    multionet_standard = load_multionet()
 
     multionet_fine = load_multionet(
         "models/03-08/multionet_chemical_fine_200e.pth",

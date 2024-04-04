@@ -762,7 +762,7 @@ def plot_chemical_examples(
             plt.plot(data[j, :, i], label=names[i])
         plt.xlabel("Timestep")
         plt.ylabel("Amount")
-        plt.legend()
+        # plt.legend()
     plt.show()
 
 
@@ -786,7 +786,7 @@ def plot_chemicals_comparative(
             plt.plot(data[i, :, 3 * j], label=f"{names[3 * j]}")
         plt.xlabel("Timestep")
         plt.ylabel("Amount")
-        plt.legend()
+        # plt.legend()
     plt.show()
 
 
@@ -1126,8 +1126,12 @@ def visualise_deep_ensemble(
 
     # Calculate mean and standard deviation of predictions
     predictions_stack = np.stack(predictions_list, axis=0)
+
+    predictions_stack = predictions_stack.transpose(0, 1, 3, 2)
     prediction_mean = np.mean(predictions_stack, axis=0)
     prediction_std = np.std(predictions_stack, axis=0)
+
+    ground_truth = ground_truth.transpose(0, 2, 1)
 
     # Generate colors
     colors = plt.cm.viridis(np.linspace(0, 1, num_chemicals))
@@ -1136,7 +1140,7 @@ def visualise_deep_ensemble(
     for datapoint_idx in range(4):  # Assuming four subplots
         ax = axs[datapoint_idx // 2, datapoint_idx % 2]
         for chem_idx in range(num_chemicals):
-            idx_factor = 2  # Just to select different chemicals
+            idx_factor = 1  # Just to select different chemicals
             chem_idx = chem_idx * idx_factor
             gt = ground_truth[:, :, chem_idx]
             mean = prediction_mean[:, :, chem_idx]

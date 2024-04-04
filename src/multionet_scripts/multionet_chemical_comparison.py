@@ -20,7 +20,7 @@ from data import load_chemical_data, create_dataloader_chemicals
 def run(args):
 
     TRAIN = False
-    VIS = False
+    VIS = True
     USE_MASS_CONSERVATION = True
     pretrained_model_path = None  # "models/02-28/multionet_chemical_500.pth"
     branch_input_size = 29

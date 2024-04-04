@@ -93,7 +93,7 @@ def main():
         "--script",
         type=str,
         # default="multionet_scripts.multionet_deeponet_comparison.run",
-        default="multionet_scripts.multionet_pchemicals_tests.run",
+        default="multionet_scripts.multionet_pchemicals_optuna.run",
         # default="multionet_scripts.multionet_spectra_fc.run",
         help="Path to the script to run, e.g., 'deeponet_scripts.deeponet_training.run'",
     )
@@ -106,7 +106,7 @@ def main():
         help="Whether to train the model.",
     )
     parser.add_argument(
-        "--vis", action="store_true", default=False, help="Whether to visualize data."
+        "--vis", action="store_true", default=True, help="Whether to visualize data."
     )
     parser.add_argument(
         "--use_mass_conservation",
@@ -184,7 +184,7 @@ def main():
     parser.add_argument(
         "--device",
         type=str,
-        default="cuda:0",
+        default="mps",
         choices=["cpu", "mps", "cuda"],
         help="Device to use for training.",
     )
