@@ -11,6 +11,7 @@ from training import (
     train_multionet_chemical,
     save_model,
     test_deeponet,
+    load_multionet,
 )
 from plotting import (
     plot_chemical_examples,
@@ -36,6 +37,8 @@ def run(args):
 
     config = PChemicalTrainConfig()
     config.device = args.device
+    TRAIN = False
+    args.vis = False
 
     data_folder = "data/chemicals_priestley"
 
@@ -65,18 +68,25 @@ def run(args):
         test_data, timesteps, fraction=1, batch_size=config.batch_size, shuffle=False
     )
 
-    multionet, train_loss, test_loss = train_multionet_chemical(
-        config, dataloader_train, dataloader_test
-    )
+    if TRAIN:
+        multionet, train_loss, test_loss = train_multionet_chemical(
+            config, dataloader_train, dataloader_test
+        )
 
-    # Save the MulitONet
-    save_model(
-        multionet,
-        "multionet_pchemicals",
-        config,
-        train_loss=train_loss,
-        test_loss=test_loss,
-    )
+        # Save the MulitONet
+        save_model(
+            multionet,
+            "multionet_pchemicals",
+            config,
+            train_loss=train_loss,
+            test_loss=test_loss,
+        )
+
+    else:
+        model_path = "models/04-06/multionet_pchemicals_opt1"
+        multionet, train_loss, test_loss = load_multionet(
+            config, config.device, model_path
+        )
 
     average_error, predictions, ground_truth = test_deeponet(
         multionet, dataloader_test, N_timesteps=config.N_timesteps
