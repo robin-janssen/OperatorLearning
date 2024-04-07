@@ -92,8 +92,8 @@ def main():
     parser.add_argument(
         "--script",
         type=str,
-        # default="multionet_scripts.multionet_deeponet_comparison.run",
-        default="multionet_scripts.multionet_pchemicals_optuna.run",
+        default="multionet_scripts.multionet_pchemicals_tests.run",
+        # default="multionet_scripts.multionet_pchemicals_optuna.run",
         # default="multionet_scripts.multionet_spectra_fc.run",
         help="Path to the script to run, e.g., 'deeponet_scripts.deeponet_training.run'",
     )
@@ -184,8 +184,8 @@ def main():
     parser.add_argument(
         "--device",
         type=str,
-        default="mps",
-        choices=["cpu", "mps", "cuda"],
+        default="cuda:0",
+        # choices=["cpu", "mps", "cuda"],
         help="Device to use for training.",
     )
 

@@ -19,12 +19,14 @@ from plotting import (
 )
 
 
-def prepare_priestley_data(train_data, test_data):
+def prepare_priestley_data(train_data, test_data, train_cut=300, test_cut=100):
     """
     Prepare the Priestley data for training.
     """
     timesteps = train_data[0, :, 0]
     timesteps = np.log10(timesteps)
+    train_data = train_data[:train_cut, :, :]
+    test_data = test_data[:test_cut, :, :]
     train_data = np.where(train_data == 0, 1e-10, train_data)
     test_data = np.where(test_data == 0, 1e-10, test_data)
     train_data = np.log10(train_data[:, :, 1:])
@@ -46,7 +48,9 @@ def run(args):
         f"Loaded chemical train/test data with shape: {train_data.shape}/{test_data.shape}"
     )
 
-    train_data, test_data, timesteps = prepare_priestley_data(train_data, test_data)
+    train_data, test_data, timesteps = prepare_priestley_data(
+        train_data, test_data, train_cut=1000
+    )
 
     if args.vis:
         fig, ax = plt.subplots()
@@ -72,7 +76,7 @@ def run(args):
     # Save the MulitONet
     save_model(
         multionet,
-        "multionet_pchemicals",
+        "multionet_pchemicals_opt1",
         config,
         train_loss=train_loss,
         test_loss=test_loss,
