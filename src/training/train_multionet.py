@@ -1083,7 +1083,7 @@ def load_multionet(
     model_path: str | None = None,
 ) -> OperatorNetworkType | tuple:
     """
-    Load a DeepONet model from a saved state dictionary.
+    Load a MultiONet model from a saved state dictionary.
     If the path_to_state_dict is None, the function will return a new MultiONet model.
 
     Args:
@@ -1098,6 +1098,8 @@ def load_multionet(
             - 'N_outputs' (int): Number of outputs.
             - 'architecture' (str): Architecture type, e.g., 'both', 'branch', or 'trunk'.
             - 'device' (str): The device to use for the model, e.g., 'cpu', 'cuda:0'.
+        device (str): The device to use for the model.
+        model_path (str): Path to the saved state dictionary. Should have the extension '.pth'.
 
     Returns:
         deeponet: Loaded DeepONet model.
@@ -1134,11 +1136,9 @@ def load_multionet(
         if model_path is None:
             model_path = conf["pretrained_model_path"]
         absolute_path = get_project_path(model_path)
-        state_dict = torch.load(absolute_path, map_location=device)
+        state_dict = torch.load(absolute_path + ".pth", map_location=device)
         deeponet.load_state_dict(state_dict)
-        prev_losses = np.load(
-            model_path.replace(".pth", "_losses.npz")
-        )
+        prev_losses = np.load(absolute_path + "_losses.npz")
         prev_train_loss = prev_losses["train_loss"]
         prev_test_loss = prev_losses["test_loss"]
 

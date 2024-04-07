@@ -12,11 +12,10 @@ import numpy as np
 import pickle
 
 from training import (
-    create_dataloader_chemicals,
     train_multionet_chemical,
     test_deeponet,
 )
-from utils import load_chemical_data
+from data import create_dataloader_chemicals, load_chemical_data
 
 import plotly.io as pio
 
@@ -167,13 +166,13 @@ def objective_2(trial):
     return loss
 
 
-if __name__ == "__main__":
+def run(args):
 
     SEED = 42
     np.random.seed(SEED)
     resumeStudy = False
     VIS = True
-    study_name = "multionet_chemical_fine"
+    study_name = "multionet_pchemicals"
     objective = objective_2
 
     if not VIS:
@@ -201,7 +200,7 @@ if __name__ == "__main__":
                 pruner=pruner,
                 storage=f"sqlite:///optuna/{study_name}.db",
             )
-        study.optimize(objective, n_trials=100)  # Adjust the number of trials as needed
+        study.optimize(objective, n_trials=200)  # Adjust the number of trials as needed
 
         print("Best trial:")
         trial = study.best_trial
@@ -216,13 +215,15 @@ if __name__ == "__main__":
             storage=f"sqlite:///optuna/{study_name}.db",
         )
         print(study.best_params)
-        plot = plot_optimization_history(study)
-        plot.show()
-        # plot2 = plot_contour(study)
-        # plot2.show()
-        plot3 = plot_param_importances(study)
-        plot3.show()
-        plot4 = plot_parallel_coordinate(study)
-        plot4.show()
-        plot5 = plot_intermediate_values(study)
-        plot5.show()
+        print(study.trials[366].params)
+        print(study.trials[366].value)
+        # plot = plot_optimization_history(study)
+        # plot.show()
+        # # plot2 = plot_contour(study)
+        # # plot2.show()
+        # plot3 = plot_param_importances(study)
+        # plot3.show()
+        # plot4 = plot_parallel_coordinate(study)
+        # plot4.show()
+        # plot5 = plot_intermediate_values(study)
+        # plot5.show()
