@@ -123,7 +123,7 @@ def run(args):
 
     config = SpectraTrainConfig()
     config.device = args.device
-    config.use_streamlit = check_streamlit()
+    config.use_streamlit = check_streamlit(config.use_streamlit)
     TRAIN = True
     FIT = False
     args.vis = True
@@ -141,15 +141,15 @@ def run(args):
 
     # Shuffle the data and create a train-test split
     np.random.shuffle(data)
-    data = data[:10]
+    # data = data[:50]
     train_data, test_data = train_test_split(data, 0.8)
 
     # Make a dataloader for the spectral data
     dataloader_train = create_dataloader_spectra(
-        train_data, timesteps, batch_size=32, shuffle=True
+        train_data, timesteps, batch_size=config.batch_size, shuffle=True
     )
     dataloader_test = create_dataloader_spectra(
-        test_data, timesteps, batch_size=32, shuffle=False
+        test_data, timesteps, batch_size=config.batch_size, shuffle=False
     )
 
     if TRAIN:
@@ -182,7 +182,9 @@ def run(args):
     relative_errors = relative_errors.reshape(-1, config.N_timesteps, config.N_outputs)
 
     plot_relative_errors_over_time(
-        relative_errors, "Relative errors over time (MultiONet for Chemicals)"
+        relative_errors,
+        "Relative errors over time (MultiONet for Chemicals)",
+        save=True,
     )
 
     print("Done!")

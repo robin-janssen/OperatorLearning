@@ -464,6 +464,8 @@ def train_deeponet_spectra(
 
     output_hist = np.zeros((conf.num_epochs, 3, conf.N_outputs, conf.N_timesteps))
 
+    print(f"Starting training on {device} ...")
+
     progress_bar = tqdm(range(conf.num_epochs), desc="Training Progress")
     for epoch in progress_bar:
         # Training step

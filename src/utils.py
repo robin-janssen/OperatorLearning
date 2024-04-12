@@ -90,18 +90,24 @@ def set_random_seed(gpu_id: int = 0):
     torch.cuda.manual_seed_all(seed)  # If you're using CUDA
 
 
-def check_streamlit():
+def check_streamlit(use_streamlit: bool | None = None) -> bool:
     """
     Function to check whether python code is run within streamlit
+    If use_streamlit is None, this will be interpreted as a request to check whether the code is run within streamlit.
+    If use_streamlit is not None, this will be interpreted as a request to set the use_streamlit variable to the provided value.
 
-    Returns
-    -------
-    use_streamlit : boolean
-        True if code is run within streamlit, else False
+    Args:
+        use_streamlit (bool | None): Whether to use streamlit or not. If None, the function will return whether the code is run within streamlit.
+
+    Returns:
+        bool: Whether to use streamlit or not.
     """
-    try:
-        from streamlit.runtime.scriptrunner import get_script_run_ctx
+    if use_streamlit is None:
+        try:
+            from streamlit.runtime.scriptrunner import get_script_run_ctx
 
-        return get_script_run_ctx() is not None
-    except ModuleNotFoundError:
-        return False
+            return get_script_run_ctx() is not None
+        except ModuleNotFoundError:
+            return False
+    else:
+        return use_streamlit
