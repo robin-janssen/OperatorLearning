@@ -4,7 +4,16 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.optimize import curve_fit
 
-from data import load_fc_spectra, spectrum
+from data import load_fc_spectra, spectrum, create_dataloader_spectra, train_test_split
+from training import (
+    train_deeponet_spectra,
+    SpectraTrainConfig,
+    save_model,
+    load_deeponet_from_conf,
+    test_deeponet,
+)
+from plotting import plot_relative_errors_over_time
+from utils import check_streamlit
 
 
 def spectral_fit(p, a, b, c):
@@ -64,7 +73,11 @@ def fit_fc_spectra_2(data):
 
 
 def plot_example_spectra(data, coeffs):
-    """This function expects input data of shape [n_sl, n_sh, n_w, n_timesteps, 2, 100]"""
+    """
+    Plot exemplary spectra with their fits.
+
+    [n_sl, n_sh, n_w, n_timesteps, 2, 100]
+    """
     fig, ax = plt.subplots(2, 2, figsize=(10, 10))
     p_values = np.logspace(-2, 3, num=100, base=10.0)
     for i in range(4):
@@ -104,17 +117,72 @@ def plot_example_spectra_2(data, spectra):
 
 
 def run(args):
-    data = load_fc_spectra("spectral-data-free-cooling-large.pkl")
-    # data = data.reshape(-1, 11, 2, 100, order="F")
+    data, timesteps, _, _, _ = load_fc_spectra(
+        "spectral-data-free-cooling-large.pkl", interpolate=True
+    )
 
-    # # Fit and save the spectra
-    # coeffs = fit_fc_spectra(data)
-    # np.save("data/free_cooling/spectra_coeffs.npy", coeffs)
+    config = SpectraTrainConfig()
+    config.device = args.device
+    config.use_streamlit = check_streamlit()
+    TRAIN = True
+    FIT = False
+    args.vis = True
 
-    # Load the coefficients
-    coeffs = np.load("data/free_cooling/spectra_coeffs.npy")
+    if FIT:
+        # # Fit and save the spectra
+        coeffs = fit_fc_spectra(data)
+        np.save("data/free_cooling/spectra_coeffs.npy", coeffs)
 
-    # Make some exemplary plots
-    plot_example_spectra(data, coeffs)
+        # Load the coefficients
+        coeffs = np.load("data/free_cooling/spectra_coeffs.npy")
+
+        # Make some exemplary plots of the spectra and their fits
+        plot_example_spectra(data, coeffs)
+
+    # Shuffle the data and create a train-test split
+    np.random.shuffle(data)
+    data = data[:10]
+    train_data, test_data = train_test_split(data, 0.8)
+
+    # Make a dataloader for the spectral data
+    dataloader_train = create_dataloader_spectra(
+        train_data, timesteps, batch_size=32, shuffle=True
+    )
+    dataloader_test = create_dataloader_spectra(
+        test_data, timesteps, batch_size=32, shuffle=False
+    )
+
+    if TRAIN:
+        # Train the DeepONet
+        deeponet, train_loss, test_loss = train_deeponet_spectra(
+            config, dataloader_train, dataloader_test
+        )
+
+        # Save the trained model
+        save_model(
+            deeponet,
+            "deeponet_spectra",
+            config,
+            train_loss=train_loss,
+            test_loss=test_loss,
+        )
+    else:
+        # Load the trained model
+        model_path = "dummy"
+        deeponet = load_deeponet_from_conf(config, args.device, model_path)
+
+    average_error, predictions, ground_truth = test_deeponet(
+        deeponet, dataloader_test, N_timesteps=config.N_timesteps
+    )
+
+    print(f"Average prediction error: {average_error:.3E}")
+
+    errors = np.abs(predictions - ground_truth)
+    relative_errors = errors / np.abs(ground_truth)
+    relative_errors = relative_errors.reshape(-1, config.N_timesteps, config.N_outputs)
+
+    plot_relative_errors_over_time(
+        relative_errors, "Relative errors over time (MultiONet for Chemicals)"
+    )
 
     print("Done!")

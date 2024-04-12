@@ -871,8 +871,8 @@ def plot_chemical_results_2(
 def plot_chemical_results(
     predictions: np.ndarray | tuple[np.ndarray, ...],
     ground_truth: np.ndarray,
-    names: list[str],
-    model_names: str | tuple[str, ...],
+    names: list[str] | None = None,
+    model_names: str | tuple[str, ...] = "Model",
     num_chemicals: int | None = None,
 ) -> None:
     """
@@ -906,22 +906,29 @@ def plot_chemical_results(
         for j in range(num_chemicals):
             # Plot each set of predictions
             for pred_idx, pred_set in enumerate(predictions):
+                pred_label = (
+                    f"{model_names[pred_idx]} {names[j]}"
+                    if names is not None
+                    else f"{model_names[pred_idx]}"
+                )
                 ax[i % 2, i // 2].plot(
                     pred_set[i, :, j],
-                    label=f"{model_names[pred_idx]} {names[j]}",
+                    label=pred_label,
                     linestyle="--",
                     color=c[j],
                     alpha=alphas[pred_idx],
                 )
             # Plot ground truth
+            gt_label = f"GT {names[j]}" if names is not None else "Ground Truth"
             ax[i % 2, i // 2].plot(
-                ground_truth[i, :, j], label=f"GT {names[j]}", linestyle="-", color=c[j]
+                ground_truth[i, :, j], label=gt_label, linestyle="-", color=c[j]
             )
             ax[i % 2, i // 2].set_title(f"Example {i + 1}")
 
     # Adjust legend and layout
-    handles, labels = ax[0, 0].get_legend_handles_labels()
-    fig.legend(handles, labels, loc="center right", bbox_to_anchor=(1.05, 0.5))
+    if names is not None:
+        handles, labels = ax[0, 0].get_legend_handles_labels()
+        fig.legend(handles, labels, loc="center right", bbox_to_anchor=(1.05, 0.5))
     plt.tight_layout(rect=[0, 0, 0.85, 1])
     plt.show()
 

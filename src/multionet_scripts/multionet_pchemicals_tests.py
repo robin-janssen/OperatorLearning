@@ -17,6 +17,7 @@ from plotting import (
     plot_chemical_examples,
     plot_chemicals_comparative,
     plot_relative_errors_over_time,
+    plot_chemical_results,
 )
 
 
@@ -40,7 +41,7 @@ def run(args):
     config = PChemicalTrainConfig()
     config.device = args.device
     TRAIN = False
-    args.vis = False
+    args.vis = True
 
     data_folder = "data/chemicals_priestley"
 
@@ -52,7 +53,7 @@ def run(args):
     )
 
     train_data, test_data, timesteps = prepare_priestley_data(
-        train_data, test_data, train_cut=1000
+        train_data, test_data, train_cut=200, test_cut=50
     )
 
     if args.vis:
@@ -65,7 +66,7 @@ def run(args):
         plot_chemicals_comparative(train_data, num_chemicals=20)
 
     dataloader_train = create_dataloader_chemicals(
-        train_data, timesteps, fraction=1, batch_size=config.batch_size, shuffle=True
+        train_data, timesteps, fraction=1, batch_size=config.batch_size, shuffle=False
     )
 
     dataloader_test = create_dataloader_chemicals(
@@ -87,20 +88,43 @@ def run(args):
         )
 
     else:
-        model_path = "models/04-06/multionet_pchemicals_opt1"
+        model_path = "models/04-07/multionet_pchemicals_opt1"
         multionet, train_loss, test_loss = load_multionet(
             config, config.device, model_path
         )
 
+    # average_error, predictions, ground_truth = test_deeponet(
+    #     multionet, dataloader_test, N_timesteps=config.N_timesteps
+    # )
+
     average_error, predictions, ground_truth = test_deeponet(
-        multionet, dataloader_test, N_timesteps=config.N_timesteps
+        multionet, dataloader_train, N_timesteps=config.N_timesteps
     )
+
+    print(f"Average prediction error: {average_error:.3E}")
 
     errors = np.abs(predictions - ground_truth)
     relative_errors = errors / np.abs(ground_truth)
+    relative_errors = relative_errors.reshape(-1, config.N_timesteps, config.N_outputs)
 
     plot_relative_errors_over_time(
         relative_errors, "Relative errors over time (MultiONet for Chemicals)"
     )
+
+    plot_chemical_results(
+        predictions=predictions,
+        ground_truth=ground_truth,
+        # names=extracted_chemicals,
+        num_chemicals=10,
+        model_names="MultiONet",
+    )
+
+    # plot_chemical_results_and_errors(
+    #     predictions=predictions,
+    #     ground_truth=ground_truth,
+    #     # names=extracted_chemicals,
+    #     num_chemicals=4,
+    #     model_names="MultiONet",
+    # )
 
     print("Done!")

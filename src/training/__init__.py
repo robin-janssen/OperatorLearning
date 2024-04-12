@@ -1,10 +1,12 @@
-from .config_classes import PChemicalTrainConfig
+from .config_classes import PChemicalTrainConfig, SpectraTrainConfig
 
 from .train_deeponet import (
     train_deeponet,
     train_deeponet_visualized,
     test_deeponet,
     load_deeponet,
+    train_deeponet_spectra,
+    load_deeponet_from_conf,
 )
 from .train_multionet import (
     train_multionet_poly_coeff,
@@ -25,10 +27,13 @@ from .train_utils import (
 
 __all__ = [
     "PChemicalTrainConfig",
+    "SpectraTrainConfig",
     "train_deeponet",
     "train_deeponet_visualized",
     "test_deeponet",
     "load_deeponet",
+    "train_deeponet_spectra",
+    "load_deeponet_from_conf",
     "train_multionet_poly_coeff",
     "train_multionet_chemical",
     "train_multionet_chemical_remote",

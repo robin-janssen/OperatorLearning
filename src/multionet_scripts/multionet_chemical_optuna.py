@@ -2,12 +2,13 @@
 # The results of the optimization are stored in optuna/multionet_chemical_fine.db
 
 import optuna
-from optuna.visualization import (
-    plot_param_importances,
-    plot_optimization_history,
-    plot_parallel_coordinate,
-    plot_intermediate_values,
-)
+
+# from optuna.visualization import (
+#     plot_param_importances,
+#     plot_optimization_history,
+#     plot_parallel_coordinate,
+#     plot_intermediate_values,
+# )
 import numpy as np
 import pickle
 

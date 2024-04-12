@@ -26,3 +26,25 @@ class PChemicalTrainConfig:
     regularization_factor: float = 0.0
     massloss_factor: float = 0.0
     batch_size: int = 256
+
+
+@dataclass
+class SpectraTrainConfig:
+    branch_input_size: int = 92
+    trunk_input_size: int = 2
+    hidden_size: int = 100
+    branch_hidden_layers: int = 3
+    trunk_hidden_layers: int = 3
+    output_neurons: int = 100
+    N_outputs: int = 1
+    num_epochs: int = 2
+    learning_rate: float = 3e-4
+    schedule: bool = False
+    N_sensors: int = 92
+    N_timesteps: int = 11
+    pretrained_model_path: Optional[str] = None
+    device: str = "mps"
+    use_streamlit: bool = False
+    optuna_trial: Trial | None = None
+    regularization_factor: float = 0.0
+    batch_size: int = 256

@@ -1,12 +1,14 @@
 import functools
 import time
 import os
+import torch.utils
 import yaml
 import dataclasses
 
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.optim as optim
 
 from models.deeponet import OperatorNetworkType
 from utils import create_date_based_directory
@@ -130,13 +132,13 @@ def save_model_2(
 
 def save_model(
     model: OperatorNetworkType,
-    model_name,
-    config,
-    subfolder="models",
+    model_name: str,
+    config: type[dataclasses.dataclass],
+    subfolder: str = "models",
     train_loss: np.ndarray | None = None,
     test_loss: np.ndarray | None = None,
     training_duration: float | None = None,
-):
+) -> None:
     """
     Save the trained model and hyperparameters.
 
@@ -148,10 +150,9 @@ def save_model(
         train_loss: The training loss history.
         test_loss: The testing loss history.
         training_duration: The duration of the training.
-
     """
     # Create a directory based on the current date
-    base_dir = os.path.dirname(os.path.realpath(__file__))
+    base_dir = os.getcwd()
     model_dir = create_date_based_directory(base_dir, subfolder)
 
     # Save the model state dict
@@ -175,3 +176,109 @@ def save_model(
         np.savez(losses_path, train_loss=train_loss, test_loss=test_loss)
 
     print(f"Model, losses and hyperparameters saved to {model_dir}")
+
+
+def setup_optimizer_and_scheduler(
+    conf: type[dataclasses.dataclass], deeponet: OperatorNetworkType
+) -> tuple:
+    """
+    Utility function to set up the optimizer and scheduler for training.
+
+    Args:
+        conf (dataclasses.dataclass): The configuration dataclass.
+        deeponet (OperatorNetworkType): The model to train.
+
+    Returns:
+        tuple (torch.optim.Optimizer, torch.optim.lr_scheduler._LRScheduler): The optimizer and scheduler.
+    """
+    optimizer = optim.Adam(
+        deeponet.parameters(),
+        lr=conf.learning_rate,
+        weight_decay=conf.regularization_factor,
+    )
+    if conf.schedule:
+        scheduler = optim.lr_scheduler.LinearLR(
+            optimizer, start_factor=1, end_factor=0.3, total_iters=conf.num_epochs
+        )
+    else:
+        scheduler = optim.lr_scheduler.LinearLR(
+            optimizer, start_factor=1, end_factor=1, total_iters=conf.num_epochs
+        )
+    return optimizer, scheduler
+
+
+def setup_criterion(conf: type[dataclasses.dataclass]) -> callable:
+    """
+    Utility function to set up the loss function for training.
+
+    Args:
+        conf (dataclasses.dataclass): The configuration dataclass.
+
+    Returns:
+        callable: The loss function.
+    """
+    crit = nn.MSELoss(reduction="sum")
+    if hasattr(conf, "masses") and conf.masses is not None:
+        weights = (1.0, conf.massloss_factor)
+        crit = mass_conservation_loss(conf.masses, crit, weights, conf.device)
+    return crit
+
+
+def setup_losses(
+    conf: type[dataclasses.dataclass],
+    prev_train_loss: np.ndarray,
+    prev_test_loss: np.ndarray,
+) -> tuple:
+    """
+    Utility function to set up the loss history arrays for training.
+
+    Args:
+        conf (dataclasses.dataclass): The configuration dataclass.
+
+    Returns:
+        tuple: The training and testing loss history arrays (both np.ndarrays).
+    """
+    if conf.pretrained_model_path is None:
+        train_loss_hist = np.zeros(conf.num_epochs)
+        test_loss_hist = np.zeros(conf.num_epochs)
+    else:
+        train_loss_hist = np.concatenate((prev_train_loss, np.zeros(conf.num_epochs)))
+        test_loss_hist = np.concatenate((prev_test_loss, np.zeros(conf.num_epochs)))
+
+    return train_loss_hist, test_loss_hist
+
+
+def training_step(model, data_loader, criterion, optimizer, device, N_outputs=1):
+    """
+    Perform a single training step on the model.
+
+    Args:
+        model (OperatorNetworkType): The model to train.
+        data_loader (torch.utils.data.DataLoader): The data loader for the training data.
+        criterion (torch.nn.Module): The loss function.
+        optimizer (torch.optim.Optimizer): The optimizer.
+        device (torch.device): The device to use for training.
+        N_outputs (int): The number of outputs of the model.
+
+    Returns:
+        float: The total loss for the training step.
+    """
+    model.train()
+    total_loss = 0
+    dataset_size = len(data_loader.dataset)
+    for branch_inputs, trunk_inputs, targets in data_loader:
+        branch_inputs, trunk_inputs, targets = (
+            branch_inputs.to(device),
+            trunk_inputs.to(device),
+            targets.to(device),
+        )
+
+        optimizer.zero_grad()
+        outputs = model(branch_inputs, trunk_inputs)
+        loss = criterion(outputs, targets)
+        loss.backward()
+        optimizer.step()
+
+        total_loss += loss.item()
+    total_loss /= dataset_size * N_outputs
+    return total_loss

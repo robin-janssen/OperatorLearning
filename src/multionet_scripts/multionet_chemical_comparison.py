@@ -19,27 +19,27 @@ from data import load_chemical_data, create_dataloader_chemicals
 
 def run(args):
 
-    TRAIN = False
+    # TRAIN = False
     VIS = True
-    USE_MASS_CONSERVATION = True
-    pretrained_model_path = None  # "models/02-28/multionet_chemical_500.pth"
+    # USE_MASS_CONSERVATION = True
+    # pretrained_model_path = None  # "models/02-28/multionet_chemical_500.pth"
     branch_input_size = 29
     trunk_input_size = 1
     hidden_size = 100
     branch_hidden_layers = 2
     trunk_hidden_layers = 2
-    num_epochs = 200
-    learning_rate = 3e-4
-    fraction = 1
+    # num_epochs = 200
+    # learning_rate = 3e-4
+    # fraction = 1
     output_neurons = 290  # number of neurons in the last layer of MODeepONet
     N_outputs = 29  # number of outputs of MODeepONet
-    architecture = "both"  # "both", "branch", "trunk"
+    # architecture = "both"  # "both", "branch", "trunk"
     device = "mps"  # "cpu", "mps"
 
-    if USE_MASS_CONSERVATION:
-        from data.osu_chemicals import masses
-    else:
-        masses = None
+    # if USE_MASS_CONSERVATION:
+    #     from data.osu_chemicals import masses
+    # else:
+    #     masses = None
 
     # data = load_chemical_data("data/dataset100")
     data = load_chemical_data("data/dataset1000")
@@ -55,7 +55,7 @@ def run(args):
     # Split the data into training and testing (80/20)
     # train_data = data[: int(0.8 * data.shape[0])]
     # test_data = data[int(0.8 * data.shape[0]) :]
-    train_data = data[:500]
+    # train_data = data[:500]
     test_data = data[500:550]
 
     extracted_chemicals = chemicals.split(", ")
@@ -64,15 +64,15 @@ def run(args):
         plot_chemical_examples(data, extracted_chemicals)
         plot_chemicals_comparative(data, extracted_chemicals)
 
-    dataloader_train = create_dataloader_chemicals(
-        train_data, timesteps, fraction=1, batch_size=32, shuffle=True
-    )
+    # dataloader_train = create_dataloader_chemicals(
+    #     train_data, timesteps, fraction=1, batch_size=32, shuffle=True
+    # )
 
     dataloader_test = create_dataloader_chemicals(
         test_data, timesteps, fraction=1, batch_size=32, shuffle=False
     )
 
-    data_example = next(iter(dataloader_train))
+    # data_example = next(iter(dataloader_train))
 
     multionet_standard = load_multionet(
         "models/02-28/multionet_chemical_500.pth",

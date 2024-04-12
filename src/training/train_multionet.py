@@ -24,6 +24,10 @@ from .train_utils import (
     mass_conservation_loss,
     time_execution,
     save_model,
+    setup_optimizer_and_scheduler,
+    setup_criterion,
+    setup_losses,
+    training_step,
 )
 from utils import get_project_path
 
@@ -310,69 +314,6 @@ def train_multionet_poly_values(
         return deeponet, train_loss_history
 
 
-def training_step(model, data_loader, criterion, optimizer, device, N_outputs):
-    model.train()
-    total_loss = 0
-    dataset_size = len(data_loader.dataset)
-    for branch_inputs, trunk_inputs, targets in data_loader:
-        branch_inputs, trunk_inputs, targets = (
-            branch_inputs.to(device),
-            trunk_inputs.to(device),
-            targets.to(device),
-        )
-
-        optimizer.zero_grad()
-        outputs = model(branch_inputs, trunk_inputs)
-        loss = criterion(outputs, targets)
-        loss.backward()
-        optimizer.step()
-
-        total_loss += loss.item()
-        total_loss /= dataset_size * N_outputs
-    return total_loss
-
-
-def test_step(model, test_loader, criterion, device):
-    model.eval()
-    total_loss = 0
-    with torch.no_grad():
-        for branch_inputs, trunk_inputs, targets in test_loader:
-            branch_inputs, trunk_inputs, targets = (
-                branch_inputs.to(device),
-                trunk_inputs.to(device),
-                targets.to(device),
-            )
-            outputs = model(branch_inputs, trunk_inputs)
-            loss = criterion(outputs, targets)
-            total_loss += loss.item()
-    return total_loss / len(test_loader.dataset)
-
-
-def setup_criterion(conf):
-    crit = nn.MSELoss(reduction="sum")
-    if conf.masses is not None:
-        weights = (1.0, conf.massloss_factor)
-        crit = mass_conservation_loss(conf.masses, crit, weights, conf.device)
-    return crit
-
-
-def setup_optimizer_and_scheduler(conf, deeponet):
-    optimizer = optim.Adam(
-        deeponet.parameters(),
-        lr=conf.learning_rate,
-        weight_decay=conf.regularization_factor,
-    )
-    if conf.schedule:
-        scheduler = optim.lr_scheduler.LinearLR(
-            optimizer, start_factor=1, end_factor=0.3, total_iters=conf.num_epochs
-        )
-    else:
-        scheduler = optim.lr_scheduler.LinearLR(
-            optimizer, start_factor=1, end_factor=1, total_iters=conf.num_epochs
-        )
-    return optimizer, scheduler
-
-
 @time_execution
 def train_multionet_chemical(
     conf: type[dataclasses.dataclass],
@@ -412,18 +353,13 @@ def train_multionet_chemical(
     """
     device = torch.device(conf.device)
 
-    deeponet, prev_train_loss, prev_test_loss = load_multionet(conf, device)
+    deeponet, train_loss, test_loss = load_multionet(conf, device)
 
     criterion = setup_criterion(conf)
 
     optimizer, scheduler = setup_optimizer_and_scheduler(conf, deeponet)
 
-    if conf.pretrained_model_path is None:
-        train_loss_hist = np.zeros(conf.num_epochs)
-        test_loss_hist = np.zeros(conf.num_epochs)
-    else:
-        train_loss_hist = np.concatenate((prev_train_loss, np.zeros(conf.num_epochs)))
-        test_loss_hist = np.concatenate((prev_test_loss, np.zeros(conf.num_epochs)))
+    train_loss_hist, test_loss_hist = setup_losses(conf, train_loss, test_loss)
     output_hist = np.zeros((conf.num_epochs, 3, conf.N_sensors, conf.N_timesteps))
 
     progress_bar = tqdm(range(conf.num_epochs), desc="Training Progress")

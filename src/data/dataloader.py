@@ -293,3 +293,50 @@ def create_dataloader_2D_coeff(
     # Create a TensorDataset and DataLoader
     dataset = TensorDataset(branch_inputs_tensor, trunk_inputs_tensor, targets_tensor)
     return DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
+
+
+def create_dataloader_spectra(
+    data: np.ndarray,
+    timesteps: np.ndarray,
+    batch_size: int = 32,
+    shuffle: bool = True,
+):
+    """
+    Create a dataloader for the spectral data.
+
+    Args:
+        data: The spectral data of shape [n_samples, n_timesteps, 2, n_values].
+        Here, the first channel contains the p-values and the second channel the
+        corresponding energy values.
+        timesteps: The timesteps for the data (length n_timesteps).
+        batch_size: The batch size for the dataloader.
+        shuffle: Whether to shuffle the data.
+    """
+    branch_inputs = []
+    trunk_inputs = []
+    targets = []
+
+    # Iterate through the grid to select the samples
+    for i in range(data.shape[0]):
+        for t in range(data.shape[1]):
+            for p in range(data.shape[3]):
+                branch_inputs.append(data[i, 0, 1, :])  # E-values at t=0
+                trunk_inputs.append((timesteps[t], data[i, t, 0, p]))  # (t, p)-value
+                targets.append(data[i, t, 1, p])  # E-value at (t, p)
+
+    # Convert to PyTorch tensors
+    branch_inputs_tensor = torch.tensor(np.array(branch_inputs), dtype=torch.float32)
+    trunk_inputs_tensor = torch.tensor(np.array(trunk_inputs), dtype=torch.float32)
+    targets_tensor = torch.tensor(np.array(targets), dtype=torch.float32)
+
+    # Create a TensorDataset and DataLoader
+    dataset = TensorDataset(branch_inputs_tensor, trunk_inputs_tensor, targets_tensor)
+
+    def worker_init_fn(worker_id):
+        torch_seed = torch.initial_seed()
+        np_seed = torch_seed // 2**32 - 1
+        np.random.seed(np_seed)
+
+    return DataLoader(
+        dataset, batch_size=batch_size, shuffle=shuffle, worker_init_fn=worker_init_fn
+    )

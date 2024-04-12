@@ -88,3 +88,20 @@ def set_random_seed(gpu_id: int = 0):
     seed = int(time.time()) + gpu_id
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)  # If you're using CUDA
+
+
+def check_streamlit():
+    """
+    Function to check whether python code is run within streamlit
+
+    Returns
+    -------
+    use_streamlit : boolean
+        True if code is run within streamlit, else False
+    """
+    try:
+        from streamlit.runtime.scriptrunner import get_script_run_ctx
+
+        return get_script_run_ctx() is not None
+    except ModuleNotFoundError:
+        return False

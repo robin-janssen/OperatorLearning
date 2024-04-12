@@ -3,6 +3,8 @@ from time import time
 
 import numpy as np
 from tqdm import tqdm
+import dataclasses
+import optuna
 
 import torch
 import torch.nn as nn
@@ -12,7 +14,14 @@ from torch.utils.data import DataLoader
 from models import DeepONet
 from models.deeponet import OperatorNetworkType
 from plotting import streamlit_visualization_history
-from .train_utils import time_execution
+from .train_utils import (
+    time_execution,
+    setup_criterion,
+    setup_optimizer_and_scheduler,
+    training_step,
+    setup_losses,
+)
+from utils import get_project_path
 
 
 # TODO Add a training continuation functionality to all training functions
@@ -226,6 +235,7 @@ def test_deeponet(
     criterion=nn.MSELoss(reduction="sum"),
     N_timesteps=101,
     timing=False,
+    transpose=False,
 ) -> tuple:
     """
     Test a DeepONet model.
@@ -234,7 +244,9 @@ def test_deeponet(
     :param data_loader: A DataLoader object.
     :param device: Device to use for testing.
     :param criterion: Loss function to use for testing.
+    :param N_timesteps: Number of timesteps.
     :param timing: Whether to time the testing process.
+    :param transpose: Whether to transpose the last two dimensions of the output arrays.
 
     :return: Total loss and predictions.
     """
@@ -246,14 +258,22 @@ def test_deeponet(
     _, _, example_targets = next(iter(data_loader))
     dataset_size = len(data_loader.dataset)
     # Make sure the buffers have the correct shape for broadcasting
-    if len(example_targets.size()) == 1:
-        targetsize = 1
-        preds_buffer = np.empty(dataset_size)
-        targets_buffer = np.empty(dataset_size)
+    # if len(example_targets.size()) == 1:
+    #     targetsize = 1
+    #     preds_buffer = np.empty(dataset_size)
+    #     targets_buffer = np.empty(dataset_size)
+    # else:
+    #     targetsize = example_targets.size(1)
+    #     preds_buffer = np.empty((dataset_size, targetsize))
+    #     targets_buffer = np.empty((dataset_size, targetsize))
+
+    targetsize = 1 if len(example_targets.size()) == 1 else example_targets.size(1)
+    if targetsize == 1:
+        preds_buffer = torch.empty(dataset_size, dtype=torch.float32)
+        targets_buffer = torch.empty(dataset_size, dtype=torch.float32)
     else:
-        targetsize = example_targets.size(1)
-        preds_buffer = np.empty((dataset_size, targetsize))
-        targets_buffer = np.empty((dataset_size, targetsize))
+        preds_buffer = torch.empty(dataset_size, targetsize, dtype=torch.float32)
+        targets_buffer = torch.empty(dataset_size, targetsize, dtype=torch.float32)
 
     buffer_index = 0
     total_loss = 0
@@ -271,14 +291,13 @@ def test_deeponet(
 
             # Store predictions in the buffer
             num_predictions = len(outputs)
-            preds_buffer[buffer_index : buffer_index + num_predictions] = (
-                outputs.cpu().numpy()
-            )
-            targets_buffer[buffer_index : buffer_index + num_predictions] = (
-                targets.cpu().numpy()
-            )
+            preds_buffer[buffer_index : buffer_index + num_predictions] = outputs
+            targets_buffer[buffer_index : buffer_index + num_predictions] = targets
             buffer_index += num_predictions
         end_time = time()
+
+    preds_buffer = preds_buffer.cpu().numpy()
+    targets_buffer = targets_buffer.cpu().numpy()
 
     if timing:
         print(f"Testing time: {end_time - start_time:.2f} seconds")
@@ -289,11 +308,13 @@ def test_deeponet(
     # Calculate relative error
     total_loss /= dataset_size * targetsize
 
-    preds_buffer = preds_buffer.reshape(-1, N_timesteps, preds_buffer.shape[1])
-    preds_buffer = preds_buffer.transpose(0, 2, 1)
+    preds_buffer = preds_buffer.reshape(-1, N_timesteps, targetsize)
 
-    targets_buffer = targets_buffer.reshape(-1, N_timesteps, targets_buffer.shape[1])
-    targets_buffer = targets_buffer.transpose(0, 2, 1)
+    targets_buffer = targets_buffer.reshape(-1, N_timesteps, targetsize)
+
+    if transpose:
+        preds_buffer = preds_buffer.transpose(0, 2, 1)
+        targets_buffer = targets_buffer.transpose(0, 2, 1)
 
     return total_loss, preds_buffer, targets_buffer
 
@@ -334,3 +355,153 @@ def load_deeponet(
     deeponet.load_state_dict(state_dict)
 
     return deeponet
+
+
+def load_deeponet_from_conf(
+    conf: type[dataclasses.dataclass] | dict,
+    device: str = "cpu",
+    model_path: str | None = None,
+) -> OperatorNetworkType | tuple:
+    """
+    Load a DeepONet model from a saved state dictionary.
+    If the path_to_state_dict is None, the function will return a new MultiONet model.
+
+    Args:
+        conf (type[dataclass]): A dataclass object containing the training configuration. It should have the following attributes:
+            - 'pretrained_model_path' (str): Path to the saved state dictionary.
+            - 'branch_input_size' (int): Input size for the branch network.
+            - 'trunk_input_size' (int): Input size for the trunk network.
+            - 'hidden_size' (int): Number of hidden units in each layer.
+            - 'branch_hidden_layers' (int): Number of hidden layers in the branch network.
+            - 'trunk_hidden_layers' (int): Number of hidden layers in the trunk network.
+            - 'output_neurons' (int): Number of neurons in the last layer.
+            - 'N_outputs' (int): Number of outputs.
+            - 'architecture' (str): Architecture type, e.g., 'both', 'branch', or 'trunk'.
+            - 'device' (str): The device to use for the model, e.g., 'cpu', 'cuda:0'.
+        device (str): The device to use for the model.
+        model_path (str): Path to the saved state dictionary. Should have the extension '.pth'.
+
+    Returns:
+        deeponet: Loaded DeepONet model.
+    """
+    # If the conf is a dataclass, convert it to a dictionary
+    if dataclasses.is_dataclass(conf):
+        conf = dataclasses.asdict(conf)
+    # Instantiate the model
+    model = DeepONet
+    deeponet = model(
+        conf["branch_input_size"],
+        conf["hidden_size"],
+        conf["branch_hidden_layers"],
+        conf["trunk_input_size"],
+        conf["hidden_size"],
+        conf["trunk_hidden_layers"],
+        conf["output_neurons"],
+        device=device,
+    )
+
+    # Load the state dictionary
+    if (
+        "pretrained_model_path" not in conf or conf["pretrained_model_path"] is None
+    ) and model_path is None:
+        prev_train_loss = None
+        prev_test_loss = None
+    else:
+        if model_path is None:
+            model_path = conf["pretrained_model_path"]
+        absolute_path = get_project_path(model_path)
+        state_dict = torch.load(absolute_path + ".pth", map_location=device)
+        deeponet.load_state_dict(state_dict)
+        prev_losses = np.load(absolute_path + "_losses.npz")
+        prev_train_loss = prev_losses["train_loss"]
+        prev_test_loss = prev_losses["test_loss"]
+
+    return deeponet, prev_train_loss, prev_test_loss
+
+
+@time_execution
+def train_deeponet_spectra(
+    conf: type[dataclasses.dataclass],
+    data_loader: DataLoader,
+    test_loader: DataLoader = None,
+) -> tuple:
+    """Train a DeepONet model.
+    The function instantiates a DeepONet model and trains it using the provided DataLoader(s).
+    It aims to predict Cosmic Ray Spectra given some values for p and t.
+
+    Args:
+        conf (type[dataclass]): A dataclass object containing the training configuration. It should have the following attributes:
+            branch_input_size (int): Input size for the branch network.
+            trunk_input_size (int): Input size for the trunk network.
+            hidden_size (int): Number of hidden units in each layer.
+            branch_hidden_layers (int): Number of hidden layers in the branch network.
+            trunk_hidden_layers (int): Number of hidden layers in the trunk network.
+            num_epochs (int): Number of epochs to train for.
+            learning_rate (int): Learning rate for the optimizer.
+            schedule (bool): Whether to use a learning rate schedule.
+            N_sensors (int): Number of sensors.
+            N_timesteps (int): Number of timesteps.
+            pretrained_model_path: Optional[str] = None
+            device (str): The device to use for training.
+            use_streamlit (bool): Whether to use Streamlit for visualization.
+            optuna_trial (Trial | None): An Optuna Trial object if the training is part of an Optuna study.
+            regularization_factor (float): Regularization factor for the loss function.
+            batch_size (int): Batch size for the DataLoader.
+        data_loader (DataLoader): A DataLoader object containing the training data.
+        test_loader (DataLoader): A DataLoader object containing the test data.
+
+    :return: Trained DeepONet model and loss history.
+    """
+    device = torch.device(conf.device)
+
+    deeponet, train_loss, test_loss = load_deeponet_from_conf(conf, device)
+
+    criterion = setup_criterion(conf)
+
+    optimizer, scheduler = setup_optimizer_and_scheduler(conf, deeponet)
+
+    train_loss_hist, test_loss_hist = setup_losses(conf, train_loss, test_loss)
+
+    output_hist = np.zeros((conf.num_epochs, 3, conf.N_outputs, conf.N_timesteps))
+
+    progress_bar = tqdm(range(conf.num_epochs), desc="Training Progress")
+    for epoch in progress_bar:
+        # Training step
+        train_loss_hist[epoch] = training_step(
+            deeponet, data_loader, criterion, optimizer, device, conf.N_outputs
+        )
+        # Optuna handling
+        if conf.optuna_trial is not None:
+            conf.optuna_trial.report(train_loss_hist[epoch], epoch)
+            if conf.optuna_trial.should_prune():
+                raise optuna.TrialPruned()
+        clr = optimizer.param_groups[0]["lr"]
+        progress_bar.set_postfix({"loss": train_loss_hist[epoch], "lr": clr})
+        scheduler.step()
+        # Validation step
+        if test_loader is not None:
+            test_loss_hist[epoch], outputs, targets = test_deeponet(
+                deeponet,
+                test_loader,
+                device,
+                criterion,
+                conf.N_timesteps,
+                transpose=True,
+            )
+            output_hist[epoch] = outputs[:3]
+            if epoch == 0:
+                targets_vis = targets[:3]
+
+        if conf.use_streamlit:
+            streamlit_visualization_history(
+                train_loss_hist[: epoch + 1],
+                test_loss_hist[: epoch + 1],
+                output_hist,
+                targets_vis,
+                epoch,
+            )
+
+    if test_loader is None:
+        test_loss_hist = None
+
+    return deeponet, train_loss_hist, test_loss_hist

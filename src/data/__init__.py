@@ -24,6 +24,7 @@ from .dataloader import (
     create_dataloader_chemicals,
     create_dataloader_modified,
     subsampling_grid,
+    create_dataloader_spectra,
 )
 
 __all__ = [
@@ -50,4 +51,5 @@ __all__ = [
     "create_dataloader_chemicals",
     "create_dataloader_modified",
     "subsampling_grid",
+    "create_dataloader_spectra",
 ]
