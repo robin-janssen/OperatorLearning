@@ -37,7 +37,7 @@ class SpectraTrainConfig:
     trunk_hidden_layers: int = 3
     output_neurons: int = 100
     N_outputs: int = 1
-    num_epochs: int = 100
+    num_epochs: int = 10
     learning_rate: float = 1e-4
     schedule: bool = False
     N_sensors: int = 92

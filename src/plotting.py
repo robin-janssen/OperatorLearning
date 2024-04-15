@@ -373,7 +373,7 @@ def plot_losses(
     loss_histories: tuple[np.array, ...],
     labels: tuple[str, ...],
     title: str = "Losses",
-    store_plot: bool = False,
+    save: bool = False,
 ) -> None:
     """
     Plot the loss trajectories for the training of multiple models.
@@ -397,7 +397,7 @@ def plot_losses(
     plt.title(title)
     plt.legend()
 
-    if store_plot:
+    if save:
         filename = "losses.png"
         directory = create_date_based_directory(subfolder="plots")
         filepath = save_plot_counter(filename, directory)
@@ -1179,5 +1179,77 @@ def visualise_deep_ensemble(
                 )
 
     plt.legend()
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_spectrum_predictions(
+    predictions: np.ndarray | tuple[np.ndarray, ...],
+    ground_truth: np.ndarray,
+    timesteps: tuple[float, ...],
+    momenta: np.ndarray,
+    model_names: str | tuple[str, ...] = "Model",
+    save: bool = False,
+) -> None:
+    """
+    Plot the results of the spectral predictions.
+
+    :param predictions: Either a 3D numpy array of shape (num_samples, num_timesteps, num_momenta) for single predictions,
+                        or a tuple of such arrays for multiple predictions.
+    :param ground_truth: 3D numpy array of shape (num_samples, num_timesteps, num_momenta)
+    :param timesteps: Tuple of floats representing the time steps.
+    :param momenta: 1D numpy array of momentum values.
+    :param model_names: string or tuple of strings for the prediction labels.
+    :param save: Whether to save the plot as a file.
+    """
+    if not isinstance(predictions, tuple):
+        predictions = (predictions,)  # Make it a tuple to generalize the plotting logic
+    if isinstance(model_names, str):
+        model_names = (model_names,)  # Make it a tuple for uniform handling
+
+    # Setup plot
+    fig, ax = plt.subplots(2, 2, figsize=(12, 10))
+    plt.suptitle("Spectral Time-Evolution Predictions (DeepONet)")
+
+    for i in range(4):
+        ax_flat = ax[i % 2, i // 2]
+        # Plot each timestep
+        for t_idx, time in enumerate(timesteps):
+            # gt_label = f"GT t={time:.1f}"
+            ax_flat.plot(
+                momenta,
+                ground_truth[i, t_idx, :],
+                # label=gt_label,
+                linestyle="-",
+                color="tab:blue",
+            )
+
+            # Plot each set of predictions
+            for pred_idx, pred_set in enumerate(predictions):
+                if len(predictions) > 1:
+                    pred_label = f"{model_names[pred_idx*3]} t={time:.3f}"
+                else:
+                    pred_label = f"t={time:.3f}"
+                ax_flat.plot(
+                    momenta,
+                    pred_set[i, t_idx, :],
+                    label=pred_label,
+                    linestyle="--",
+                    color="tab:orange",
+                    alpha=0.8,
+                )
+
+        ax_flat.set_title(f"Sample {i + 1}")
+        ax_flat.set_xlabel(r"$p$")
+        ax_flat.set_ylabel(r"$p^2 f$")
+        ax_flat.legend()
+
+    if save:
+        filename = "spectrum_predictions.png"
+        directory = create_date_based_directory(subfolder="plots")
+        filepath = save_plot_counter(filename, directory)
+        plt.savefig(filepath)
+        print(f"Plot saved as: {filepath}")
+
     plt.tight_layout()
     plt.show()

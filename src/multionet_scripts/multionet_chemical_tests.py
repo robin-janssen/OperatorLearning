@@ -15,7 +15,7 @@ from plotting import (
     plot_relative_errors_over_time,
 )
 from training import (
-    train_multionet_chemical,
+    train_multionet_chemical_2,
     test_deeponet,
     load_multionet,
     save_model,
@@ -24,9 +24,9 @@ from utils import read_yaml_config
 
 
 def run(args):
-    TRAIN = args.train
-    VIS = args.vis
-    USE_MASS_CONSERVATION = True
+    TRAIN = True  # args.train
+    VIS = False  # args.vis
+    USE_MASS_CONSERVATION = False
     pretrained_model_path = None  # "models/03-02/multionet_chemical_500_400e.pth"
     branch_input_size = 29
     trunk_input_size = 1
@@ -48,8 +48,8 @@ def run(args):
     else:
         masses = None
 
-    # data = load_chemical_data("data/dataset100")
-    data = load_chemical_data("data/dataset1000")
+    data = load_chemical_data("data/dataset100")
+    # data = load_chemical_data("data/dataset1000")
     data_shape = data.shape
     print(f"Data shape: {data_shape}")
 
@@ -80,7 +80,7 @@ def run(args):
     )
 
     if TRAIN:
-        multionet, train_loss, test_loss = train_multionet_chemical(
+        multionet, train_loss, test_loss = train_multionet_chemical_2(
             dataloader_train,
             masses,
             branch_input_size,
@@ -107,7 +107,7 @@ def run(args):
         # Make sure that the loss history and train time are correct in case of pretrained model
         if pretrained_model_path is not None:
             config = read_yaml_config(pretrained_model_path)
-            train_time = train_multionet_chemical.duration
+            train_time = train_multionet_chemical_2.duration
             train_time += config["train_duration"]
             prev_train_loss, prev_test_loss = np.load(
                 pretrained_model_path.replace(".pth", "_losses.npz")
@@ -116,7 +116,7 @@ def run(args):
             test_loss = np.concatenate((prev_test_loss, test_loss))
             num_epochs += config["num_epochs"]
         else:
-            train_time = train_multionet_chemical.duration
+            train_time = train_multionet_chemical_2.duration
 
         # Save the MulitONet
         save_model(

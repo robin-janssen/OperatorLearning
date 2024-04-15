@@ -6,13 +6,18 @@ from scipy.optimize import curve_fit
 
 from data import load_fc_spectra, spectrum, create_dataloader_spectra, train_test_split
 from training import (
-    train_deeponet_spectra,
     SpectraTrainConfig,
+    train_deeponet_spectra,
     save_model,
     load_deeponet_from_conf,
     test_deeponet,
+    inference_timing,
 )
-from plotting import plot_relative_errors_over_time
+from plotting import (
+    plot_relative_errors_over_time,
+    plot_losses,
+    plot_spectrum_predictions,
+)
 from utils import check_streamlit
 
 
@@ -117,16 +122,20 @@ def plot_example_spectra_2(data, spectra):
 
 
 def run(args):
-    data, timesteps, _, _, _ = load_fc_spectra(
+    data, time_labels, _, _, _ = load_fc_spectra(
         "spectral-data-free-cooling-large.pkl", interpolate=True
     )
+
+    momenta = data[0, 0, 0, :]
+
+    timesteps = np.linspace(0, 1, 11)
 
     config = SpectraTrainConfig()
     config.device = args.device
     config.use_streamlit = check_streamlit(config.use_streamlit)
-    TRAIN = True
+    TRAIN = False
     FIT = False
-    args.vis = True
+    args.vis = False
 
     if FIT:
         # # Fit and save the spectra
@@ -141,7 +150,7 @@ def run(args):
 
     # Shuffle the data and create a train-test split
     np.random.shuffle(data)
-    # data = data[:50]
+    # data = data[:200]
     train_data, test_data = train_test_split(data, 0.8)
 
     # Make a dataloader for the spectral data
@@ -168,8 +177,10 @@ def run(args):
         )
     else:
         # Load the trained model
-        model_path = "dummy"
-        deeponet = load_deeponet_from_conf(config, args.device, model_path)
+        model_path = "models/04-15/deeponet_spectra"
+        deeponet, train_loss, test_loss = load_deeponet_from_conf(
+            config, args.device, model_path
+        )
 
     average_error, predictions, ground_truth = test_deeponet(
         deeponet, dataloader_test, N_timesteps=config.N_timesteps
@@ -177,14 +188,42 @@ def run(args):
 
     print(f"Average prediction error: {average_error:.3E}")
 
-    errors = np.abs(predictions - ground_truth)
-    relative_errors = errors / np.abs(ground_truth)
-    relative_errors = relative_errors.reshape(-1, config.N_timesteps, config.N_outputs)
+    predictions = predictions.reshape(-1, config.N_timesteps, config.N_sensors)
+    ground_truth = ground_truth.reshape(-1, config.N_timesteps, config.N_sensors)
 
-    plot_relative_errors_over_time(
-        relative_errors,
-        "Relative errors over time (MultiONet for Chemicals)",
-        save=True,
-    )
+    # predictions = predictions.transpose(0, 2, 1)
+    # predictions = predictions.reshape(-1, config.N_sensors, config.N_timesteps)
+    # predictions = predictions.transpose(0, 2, 1)
+
+    # ground_truth = ground_truth.transpose(0, 2, 1)
+    # ground_truth = ground_truth.reshape(-1, config.N_sensors, config.N_timesteps)
+    # ground_truth = ground_truth.transpose(0, 2, 1)
+
+    inference_timing(deeponet, dataloader_test, args.device)
+
+    if args.vis:
+
+        plot_losses(
+            (train_loss, test_loss),
+            ("Train loss", "Test loss"),
+            "Losses (DeepONet for Free Cooling CR Spectra)",
+            save=False,
+        )
+
+        errors = np.abs(predictions - ground_truth)
+        relative_errors = errors / np.abs(ground_truth)
+        relative_errors = relative_errors.reshape(
+            -1, config.N_timesteps, config.N_outputs
+        )
+
+        plot_relative_errors_over_time(
+            relative_errors,
+            "Relative errors over time (DeepONet for Free Cooling CR Spectra)",
+            save=False,
+        )
+
+        plot_spectrum_predictions(
+            predictions, ground_truth, time_labels, momenta, save=False
+        )
 
     print("Done!")

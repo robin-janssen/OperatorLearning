@@ -308,9 +308,9 @@ def test_deeponet(
     # Calculate relative error
     total_loss /= dataset_size * targetsize
 
-    preds_buffer = preds_buffer.reshape(-1, N_timesteps, targetsize)
+    # preds_buffer = preds_buffer.reshape(-1, N_timesteps, targetsize)
 
-    targets_buffer = targets_buffer.reshape(-1, N_timesteps, targetsize)
+    # targets_buffer = targets_buffer.reshape(-1, N_timesteps, targetsize)
 
     if transpose:
         preds_buffer = preds_buffer.transpose(0, 2, 1)
@@ -379,7 +379,7 @@ def load_deeponet_from_conf(
             - 'architecture' (str): Architecture type, e.g., 'both', 'branch', or 'trunk'.
             - 'device' (str): The device to use for the model, e.g., 'cpu', 'cuda:0'.
         device (str): The device to use for the model.
-        model_path (str): Path to the saved state dictionary. Should have the extension '.pth'.
+        model_path (str): Path to the saved state dict. Should not include a file ending.
 
     Returns:
         deeponet: Loaded DeepONet model.
@@ -462,9 +462,9 @@ def train_deeponet_spectra(
 
     train_loss_hist, test_loss_hist = setup_losses(conf, train_loss, test_loss)
 
-    output_hist = np.zeros((conf.num_epochs, 3, conf.N_outputs, conf.N_timesteps))
+    output_hist = np.zeros((conf.num_epochs, 3, conf.N_sensors, conf.N_timesteps))
 
-    print(f"Starting training on {device} ...")
+    print(f"Starting training on [{device}]...")
 
     progress_bar = tqdm(range(conf.num_epochs), desc="Training Progress")
     for epoch in progress_bar:
@@ -488,8 +488,10 @@ def train_deeponet_spectra(
                 device,
                 criterion,
                 conf.N_timesteps,
-                transpose=True,
+                transpose=False,
             )
+            outputs = outputs.reshape(-1, conf.N_sensors, conf.N_timesteps)
+            targets = targets.reshape(-1, conf.N_sensors, conf.N_timesteps)
             output_hist[epoch] = outputs[:3]
             if epoch == 0:
                 targets_vis = targets[:3]

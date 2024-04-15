@@ -11,6 +11,7 @@ from .train_deeponet import (
 from .train_multionet import (
     train_multionet_poly_coeff,
     train_multionet_chemical,
+    train_multionet_chemical_2,
     train_multionet_chemical_remote,
     train_multionet_chemical_cosann,
     train_multionet_poly_values,
@@ -23,6 +24,7 @@ from .train_utils import (
     mass_conservation_loss,
     poly_eval_torch,
     time_execution,
+    inference_timing,
 )
 
 __all__ = [
@@ -36,6 +38,7 @@ __all__ = [
     "load_deeponet_from_conf",
     "train_multionet_poly_coeff",
     "train_multionet_chemical",
+    "train_multionet_chemical_2",
     "train_multionet_chemical_remote",
     "train_multionet_chemical_cosann",
     "train_multionet_poly_values",
@@ -46,4 +49,5 @@ __all__ = [
     "mass_conservation_loss",
     "poly_eval_torch",
     "time_execution",
+    "inference_timing",
 ]

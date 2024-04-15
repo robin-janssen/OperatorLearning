@@ -282,3 +282,34 @@ def training_step(model, data_loader, criterion, optimizer, device, N_outputs=1)
         total_loss += loss.item()
     total_loss /= dataset_size * N_outputs
     return total_loss
+
+
+def inference_timing(
+    deeponet: OperatorNetworkType, data_loader: torch.utils.data.DataLoader, device: str
+) -> None:
+    """
+    Measure the inference time of the model.
+
+    Args:
+        deeponet (OperatorNetworkType): The model to test.
+        data_loader (torch.utils.data.DataLoader): The data loader for the test data.
+        device (str): The device to use for testing.
+    """
+    deeponet.eval()
+    with torch.no_grad():
+        inference_times = []
+        for branch_inputs, trunk_inputs, _ in data_loader:
+            branch_inputs, trunk_inputs = branch_inputs.to(device), trunk_inputs.to(
+                device
+            )
+            deeponet = deeponet.to(device)
+            start_time = time.time()
+            _ = deeponet(branch_inputs, trunk_inputs)
+            end_time = time.time()
+            inference_times.append(end_time - start_time)
+
+    avg_inference_time = np.mean(inference_times[1:])
+    std_inference_time = np.std(inference_times[1:])
+    print(
+        f"Average inference time: {avg_inference_time:.4f} ± {std_inference_time:.4f} s on {device}"
+    )

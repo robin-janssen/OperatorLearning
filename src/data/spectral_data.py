@@ -74,7 +74,6 @@ def load_fc_spectra(filename="spectral-data-free-cooling-large.pkl", interpolate
     cleaned_data = np.log10(cleaned_data)
 
     # Use equispaced timesteps
-    timesteps = np.linspace(0, 1, num=timesteps.shape[0])
     print(f"Timesteps: {timesteps}")
     print(f"Data shape: {cleaned_data.shape}")
     return cleaned_data, timesteps, sl, sh, w
