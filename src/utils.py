@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import os
-import yaml
+import time
 from datetime import datetime
+import yaml
+
 import streamlit as st
-import numpy as np
+import torch
 
 
 # TODO complete type hints
@@ -60,37 +62,6 @@ def get_or_create_placeholder(key):
     return st.session_state[key]
 
 
-def load_chemical_data(data_folder, file_extension=".dat", separator=" "):
-    """
-    Load chemical data from a directory containing multiple files.
-
-    :param data_folder: The directory containing the data files.
-    :param file_extension: The file extension of the data files.
-    :return: A list of numpy arrays containing the data from each file.
-    """
-    # Get a list of all relevant files in the directory
-    dataset_path = get_project_path(data_folder)
-    all_files = os.listdir(dataset_path)
-    files = [file for file in all_files if file.endswith(file_extension)]
-    num_files = len(files)
-    files.sort()
-
-    # Load one file to see the data shape
-    data = np.loadtxt(os.path.join(dataset_path, files[0]), delimiter=separator)
-    data_shape = data.shape
-
-    # Create an array to store all the data
-    all_data = np.zeros((num_files, *data_shape))
-
-    # Iterate over all the files and load the data
-    for i, file in enumerate(files):
-        if file.endswith(file_extension):
-            data = np.loadtxt(os.path.join(dataset_path, file), delimiter=separator)
-            all_data[i] = data
-
-    return all_data
-
-
 def get_project_path(relative_path):
     """
     Construct the absolute path to a project resource (data or model) based on a relative path.
@@ -110,3 +81,33 @@ def get_project_path(relative_path):
     project_resource_path = os.path.normpath(project_resource_path)
 
     return project_resource_path
+
+
+def set_random_seed(gpu_id: int = 0):
+    # Combine the current time with the GPU ID to create a unique seed
+    seed = int(time.time()) + gpu_id
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)  # If you're using CUDA
+
+
+def check_streamlit(use_streamlit: bool | None = None) -> bool:
+    """
+    Function to check whether python code is run within streamlit
+    If use_streamlit is None, this will be interpreted as a request to check whether the code is run within streamlit.
+    If use_streamlit is not None, this will be interpreted as a request to set the use_streamlit variable to the provided value.
+
+    Args:
+        use_streamlit (bool | None): Whether to use streamlit or not. If None, the function will return whether the code is run within streamlit.
+
+    Returns:
+        bool: Whether to use streamlit or not.
+    """
+    if use_streamlit is None:
+        try:
+            from streamlit.runtime.scriptrunner import get_script_run_ctx
+
+            return get_script_run_ctx() is not None
+        except ModuleNotFoundError:
+            return False
+    else:
+        return use_streamlit

@@ -4,7 +4,7 @@ from .deeponet import (
     MultiONetB,
     MultiONetT,
     OperatorNetwork,
-    OperatorNetworkType,
+    initialize_weights,
 )
 
 __all__ = [
@@ -14,5 +14,5 @@ __all__ = [
     "MultiONetT",
     "MultiONetTest",
     "OperatorNetwork",
-    "OperatorNetworkType",
+    "initialize_weights",
 ]

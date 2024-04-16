@@ -373,12 +373,15 @@ def plot_losses(
     loss_histories: tuple[np.array, ...],
     labels: tuple[str, ...],
     title: str = "Losses",
+    save: bool = False,
 ) -> None:
     """
     Plot the loss trajectories for the training of multiple models.
 
     :param loss_histories: List of loss history arrays.
     :param labels: List of labels for each loss history.
+    :param title: Title of the plot.
+    :param store_plot: Whether to store the plot as an image file.
     """
 
     # Create the figure
@@ -394,11 +397,12 @@ def plot_losses(
     plt.title(title)
     plt.legend()
 
-    filename = "losses.png"
-    directory = create_date_based_directory(subfolder="plots")
-    filepath = save_plot_counter(filename, directory)
-    plt.savefig(filepath)
-    print(f"Plot saved as: {filepath}")
+    if save:
+        filename = "losses.png"
+        directory = create_date_based_directory(subfolder="plots")
+        filepath = save_plot_counter(filename, directory)
+        plt.savefig(filepath)
+        print(f"Plot saved as: {filepath}")
 
     plt.show()
 
@@ -738,17 +742,19 @@ def streamlit_visualization_history(
 
 
 def plot_chemical_examples(
-    data: np.array, names: list[str], num_chemicals: int | None = None
+    data: np.array, names: list[str] | None = None, num_chemicals: int | None = None
 ) -> None:
     """Creates four exemplary plots, displaying the amount of each chemical over time.
 
     :param data: 3D numpy array with the chemical data.
-    :param names: List of strings with the names of the chemicals.
+    :param names: Optional list of strings with the names of the chemicals.
     :param num_chemicals: Number of chemicals to display. If None, all chemicals are displayed.
     :return: None
     """
     if num_chemicals is None:
         num_chemicals = data.shape[2]
+    if names is None:
+        names = [f"Chem {i+1}" for i in range(num_chemicals)]
     plt.subplots(2, 2, figsize=(10, 10))
     for j in range(4):
         for i in range(num_chemicals):
@@ -756,27 +762,31 @@ def plot_chemical_examples(
             plt.plot(data[j, :, i], label=names[i])
         plt.xlabel("Timestep")
         plt.ylabel("Amount")
-        plt.legend()
+        # plt.legend()
     plt.show()
 
 
 def plot_chemicals_comparative(
-    data: np.array, names: list[str], num_examples: int = 10
+    data: np.array, names: list[str] | None = None, num_chemicals: int | None = None
 ) -> None:
     """Creates four plots, displaying the evolution of four chemicals over time.
 
     :param data: 3D numpy array with the chemical data.
-    :param names: List of strings with the names of the chemicals.
+    :param names: Optional list of strings with the names of the chemicals.
     :param num_examples: Number of examples to display for each chemical.
     """
+    if num_chemicals is None:
+        num_chemicals = data.shape[2]
+    if names is None:
+        names = [f"Chem {i+1}" for i in range(data.shape[2])]
     plt.subplots(2, 2, figsize=(10, 10))
     for j in range(4):
         plt.subplot(2, 2, j + 1)
-        for i in range(num_examples):
+        for i in range(num_chemicals):
             plt.plot(data[i, :, 3 * j], label=f"{names[3 * j]}")
         plt.xlabel("Timestep")
         plt.ylabel("Amount")
-        plt.legend()
+        # plt.legend()
     plt.show()
 
 
@@ -861,8 +871,8 @@ def plot_chemical_results_2(
 def plot_chemical_results(
     predictions: np.ndarray | tuple[np.ndarray, ...],
     ground_truth: np.ndarray,
-    names: list[str],
-    model_names: str | tuple[str, ...],
+    names: list[str] | None = None,
+    model_names: str | tuple[str, ...] = "Model",
     num_chemicals: int | None = None,
 ) -> None:
     """
@@ -896,22 +906,29 @@ def plot_chemical_results(
         for j in range(num_chemicals):
             # Plot each set of predictions
             for pred_idx, pred_set in enumerate(predictions):
+                pred_label = (
+                    f"{model_names[pred_idx]} {names[j]}"
+                    if names is not None
+                    else f"{model_names[pred_idx]}"
+                )
                 ax[i % 2, i // 2].plot(
                     pred_set[i, :, j],
-                    label=f"{model_names[pred_idx]} {names[j]}",
+                    label=pred_label,
                     linestyle="--",
                     color=c[j],
                     alpha=alphas[pred_idx],
                 )
             # Plot ground truth
+            gt_label = f"GT {names[j]}" if names is not None else "Ground Truth"
             ax[i % 2, i // 2].plot(
-                ground_truth[i, :, j], label=f"GT {names[j]}", linestyle="-", color=c[j]
+                ground_truth[i, :, j], label=gt_label, linestyle="-", color=c[j]
             )
             ax[i % 2, i // 2].set_title(f"Example {i + 1}")
 
     # Adjust legend and layout
-    handles, labels = ax[0, 0].get_legend_handles_labels()
-    fig.legend(handles, labels, loc="center right", bbox_to_anchor=(1.05, 0.5))
+    if names is not None:
+        handles, labels = ax[0, 0].get_legend_handles_labels()
+        fig.legend(handles, labels, loc="center right", bbox_to_anchor=(1.05, 0.5))
     plt.tight_layout(rect=[0, 0, 0.85, 1])
     plt.show()
 
@@ -1097,4 +1114,142 @@ def plot_mass_conservation(ground_truth, masses, num_examples=5):
     plt.ylabel("Total Mass")
     plt.title("Total Mass Conservation Over Time")
     plt.legend()
+    plt.show()
+
+
+def visualise_deep_ensemble(
+    predictions_list, ground_truth, num_chemicals, chemical_names
+):
+    """
+    Visualize the predictions of a deep ensemble and the ground truth.
+
+    :param predictions_list: List of arrays with shape [N_datapoints, N_timesteps, N_chemicals]
+    :param ground_truth: Array of shape [N_datapoints, N_timesteps, N_chemicals]
+    :param num_chemicals: Number of chemicals to plot
+    :param chemical_names: List of chemical names
+    """
+    # Ensure num_chemicals does not exceed the size of the third dimension
+    num_chemicals = min(num_chemicals, ground_truth.shape[2])
+
+    # Calculate mean and standard deviation of predictions
+    predictions_stack = np.stack(predictions_list, axis=0)
+
+    predictions_stack = predictions_stack.transpose(0, 1, 3, 2)
+    prediction_mean = np.mean(predictions_stack, axis=0)
+    prediction_std = np.std(predictions_stack, axis=0)
+
+    ground_truth = ground_truth.transpose(0, 2, 1)
+
+    # Generate colors
+    colors = plt.cm.viridis(np.linspace(0, 1, num_chemicals))
+
+    fig, axs = plt.subplots(2, 2, figsize=(15, 10))
+    for datapoint_idx in range(4):  # Assuming four subplots
+        ax = axs[datapoint_idx // 2, datapoint_idx % 2]
+        for chem_idx in range(num_chemicals):
+            idx_factor = 1  # Just to select different chemicals
+            chem_idx = chem_idx * idx_factor
+            gt = ground_truth[:, :, chem_idx]
+            mean = prediction_mean[:, :, chem_idx]
+            std = prediction_std[:, :, chem_idx]
+
+            timesteps = np.arange(gt.shape[1])
+            ax.plot(
+                timesteps,
+                gt[datapoint_idx],
+                color=colors[chem_idx // idx_factor],
+                label=f"GT {chemical_names[chem_idx]}",
+            )
+            ax.plot(
+                timesteps,
+                mean[datapoint_idx],
+                "--",
+                color=colors[chem_idx // idx_factor],
+                label=f"Pred Chem {chemical_names[chem_idx]}",
+            )
+
+            # Plot standard deviations as shaded areas
+            for sigma_multiplier in [1, 2, 3]:  # 1, 2, and 3 standard deviations
+                ax.fill_between(
+                    timesteps,
+                    mean[datapoint_idx] - sigma_multiplier * std[datapoint_idx],
+                    mean[datapoint_idx] + sigma_multiplier * std[datapoint_idx],
+                    color=colors[chem_idx // idx_factor],
+                    alpha=0.5 / sigma_multiplier,
+                )
+
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_spectrum_predictions(
+    predictions: np.ndarray | tuple[np.ndarray, ...],
+    ground_truth: np.ndarray,
+    timesteps: tuple[float, ...],
+    momenta: np.ndarray,
+    model_names: str | tuple[str, ...] = "Model",
+    save: bool = False,
+) -> None:
+    """
+    Plot the results of the spectral predictions.
+
+    :param predictions: Either a 3D numpy array of shape (num_samples, num_timesteps, num_momenta) for single predictions,
+                        or a tuple of such arrays for multiple predictions.
+    :param ground_truth: 3D numpy array of shape (num_samples, num_timesteps, num_momenta)
+    :param timesteps: Tuple of floats representing the time steps.
+    :param momenta: 1D numpy array of momentum values.
+    :param model_names: string or tuple of strings for the prediction labels.
+    :param save: Whether to save the plot as a file.
+    """
+    if not isinstance(predictions, tuple):
+        predictions = (predictions,)  # Make it a tuple to generalize the plotting logic
+    if isinstance(model_names, str):
+        model_names = (model_names,)  # Make it a tuple for uniform handling
+
+    # Setup plot
+    fig, ax = plt.subplots(2, 2, figsize=(12, 10))
+    plt.suptitle("Spectral Time-Evolution Predictions (DeepONet)")
+
+    for i in range(4):
+        ax_flat = ax[i % 2, i // 2]
+        # Plot each timestep
+        for t_idx, time in enumerate(timesteps):
+            # gt_label = f"GT t={time:.1f}"
+            ax_flat.plot(
+                momenta,
+                ground_truth[i, t_idx, :],
+                # label=gt_label,
+                linestyle="-",
+                color="tab:blue",
+            )
+
+            # Plot each set of predictions
+            for pred_idx, pred_set in enumerate(predictions):
+                if len(predictions) > 1:
+                    pred_label = f"{model_names[pred_idx*3]} t={time:.3f}"
+                else:
+                    pred_label = f"t={time:.3f}"
+                ax_flat.plot(
+                    momenta,
+                    pred_set[i, t_idx, :],
+                    label=pred_label,
+                    linestyle="--",
+                    color="tab:orange",
+                    alpha=0.8,
+                )
+
+        ax_flat.set_title(f"Sample {i + 1}")
+        ax_flat.set_xlabel(r"$p$")
+        ax_flat.set_ylabel(r"$p^2 f$")
+        ax_flat.legend()
+
+    if save:
+        filename = "spectrum_predictions.png"
+        directory = create_date_based_directory(subfolder="plots")
+        filepath = save_plot_counter(filename, directory)
+        plt.savefig(filepath)
+        print(f"Plot saved as: {filepath}")
+
+    plt.tight_layout()
     plt.show()

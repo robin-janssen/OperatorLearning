@@ -4,7 +4,7 @@
 # The third model is the result of a more extensive fine-tuning.
 
 import numpy as np
-from data import chemicals
+from data.osu_chemicals import chemicals
 from plotting import (
     plot_chemical_examples,
     plot_chemicals_comparative,
@@ -13,9 +13,8 @@ from plotting import (
     plot_chemical_errors,
     plot_relative_errors_over_time,
 )
-from data import create_dataloader_chemicals
+from data import create_dataloader_chemicals, load_chemical_data
 from training import test_deeponet, load_multionet
-from utils import load_chemical_data
 
 
 def run(args):
@@ -73,18 +72,7 @@ def run(args):
         test_data, timesteps, fraction=1, batch_size=32, shuffle=False
     )
 
-    multionet_standard = load_multionet(
-        "models/02-28/multionet_chemical_500.pth",
-        branch_input_size,
-        trunk_input_size,
-        hidden_size,
-        branch_hidden_layers,
-        trunk_hidden_layers,
-        output_neurons,
-        N_outputs,
-        architecture="both",
-        device=device,
-    )
+    multionet_standard = load_multionet()
 
     multionet_fine = load_multionet(
         "models/03-08/multionet_chemical_fine_200e.pth",

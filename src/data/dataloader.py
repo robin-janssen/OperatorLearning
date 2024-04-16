@@ -119,57 +119,6 @@ def subsampling_grid(
 
 
 def create_dataloader_2D(
-    functions: np.array,
-    sensor_points: np.array,
-    timesteps: np.array,
-    subsampling_grid=[],
-    batch_size=32,
-    shuffle=False,
-):
-    # TODO: What does the optional subsampling_grid input do exactly?
-    """
-    Create a DataLoader with optional subsampling on a grid for time-dependent data for DeepONet.
-
-    :param functions: 3D numpy array with shape (num_samples, len(sensor_points), len(timesteps))
-                      representing the function values over time.
-    :param sensor_points: 1D numpy array of sensor locations in the domain.
-    :param timesteps: 1D numpy array of timesteps.
-    :param fraction: Fraction of the grid points to sample.
-    :param batch_size: Batch size for the DataLoader.
-    :param shuffle: Whether to shuffle the data.
-    :return: A DataLoader object.
-    """
-    # Create subsampling grid
-
-    branch_inputs = []
-    trunk_inputs = []
-    targets = []
-
-    if len(subsampling_grid) == 0:
-        subsampling_grid = np.ones((len(sensor_points), len(timesteps)), dtype=int)
-
-    # Iterate through the grid to select the samples
-    for sample in functions:
-        for i, sensor_point in enumerate(sensor_points):
-            for j, time in enumerate(timesteps):
-                if subsampling_grid[i, j] == 1:
-                    branch_inputs.append(sample[:, 0])  # Initial state of the function
-                    trunk_inputs.append([sensor_point, time])
-                    targets.append(
-                        sample[i, j]
-                    )  # Function value at this sensor point and time
-
-    # Convert to PyTorch tensors
-    branch_inputs_tensor = torch.tensor(np.array(branch_inputs), dtype=torch.float32)
-    trunk_inputs_tensor = torch.tensor(np.array(trunk_inputs), dtype=torch.float32)
-    targets_tensor = torch.tensor(np.array(targets), dtype=torch.float32)
-
-    # Create a TensorDataset and DataLoader
-    dataset = TensorDataset(branch_inputs_tensor, trunk_inputs_tensor, targets_tensor)
-    return DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
-
-
-def create_dataloader_2D_frac(
     functions,
     sensor_points,
     timesteps,
@@ -230,6 +179,7 @@ def create_dataloader_chemicals(
     fraction=1,
     batch_size=32,
     shuffle=False,
+    normalize=False,
 ):
     """
     Create a DataLoader with optional fractional subsampling for chemical evolution data for DeepONet.
@@ -267,12 +217,29 @@ def create_dataloader_chemicals(
     trunk_inputs_tensor = torch.tensor(np.array(trunk_inputs), dtype=torch.float32)
     targets_tensor = torch.tensor(np.array(targets), dtype=torch.float32)
 
+    if normalize:
+        branch_inputs_tensor = (
+            branch_inputs_tensor - branch_inputs_tensor.mean()
+        ) / branch_inputs_tensor.std()
+        trunk_inputs_tensor = (
+            trunk_inputs_tensor - trunk_inputs_tensor.mean()
+        ) / trunk_inputs_tensor.std()
+        targets_tensor = (targets_tensor - targets_tensor.mean()) / targets_tensor.std()
+
     # Create a TensorDataset and DataLoader
     dataset = TensorDataset(branch_inputs_tensor, trunk_inputs_tensor, targets_tensor)
-    return DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
+
+    def worker_init_fn(worker_id):
+        torch_seed = torch.initial_seed()
+        np_seed = torch_seed // 2**32 - 1
+        np.random.seed(np_seed)
+
+    return DataLoader(
+        dataset, batch_size=batch_size, shuffle=shuffle, worker_init_fn=worker_init_fn
+    )
 
 
-def create_dataloader_2D_frac_coeff(
+def create_dataloader_2D_coeff(
     functions,
     coefficients,
     sensor_points,
@@ -326,3 +293,50 @@ def create_dataloader_2D_frac_coeff(
     # Create a TensorDataset and DataLoader
     dataset = TensorDataset(branch_inputs_tensor, trunk_inputs_tensor, targets_tensor)
     return DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
+
+
+def create_dataloader_spectra(
+    data: np.ndarray,
+    timesteps: np.ndarray,
+    batch_size: int = 32,
+    shuffle: bool = True,
+):
+    """
+    Create a dataloader for the spectral data.
+
+    Args:
+        data: The spectral data of shape [n_samples, n_timesteps, 2, n_values].
+        Here, the first channel contains the p-values and the second channel the
+        corresponding energy values.
+        timesteps: The timesteps for the data (length n_timesteps).
+        batch_size: The batch size for the dataloader.
+        shuffle: Whether to shuffle the data.
+    """
+    branch_inputs = []
+    trunk_inputs = []
+    targets = []
+
+    # Iterate through the grid to select the samples
+    for i in range(data.shape[0]):
+        for t in range(data.shape[1]):
+            for p in range(data.shape[3]):
+                branch_inputs.append(data[i, 0, 1, :])  # E-values at t=0
+                trunk_inputs.append((timesteps[t], data[i, t, 0, p]))  # (t, p)-value
+                targets.append(data[i, t, 1, p])  # E-value at (t, p)
+
+    # Convert to PyTorch tensors
+    branch_inputs_tensor = torch.tensor(np.array(branch_inputs), dtype=torch.float32)
+    trunk_inputs_tensor = torch.tensor(np.array(trunk_inputs), dtype=torch.float32)
+    targets_tensor = torch.tensor(np.array(targets), dtype=torch.float32)
+
+    # Create a TensorDataset and DataLoader
+    dataset = TensorDataset(branch_inputs_tensor, trunk_inputs_tensor, targets_tensor)
+
+    def worker_init_fn(worker_id):
+        torch_seed = torch.initial_seed()
+        np_seed = torch_seed // 2**32 - 1
+        np.random.seed(np_seed)
+
+    return DataLoader(
+        dataset, batch_size=batch_size, shuffle=shuffle, worker_init_fn=worker_init_fn
+    )

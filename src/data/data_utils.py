@@ -52,3 +52,17 @@ def numerical_integration(
         )
 
     return antiderivative
+
+
+def train_test_split(data: np.array, train_fraction: float = 0.8, cutoff: int = None):
+    """
+    Split the data into training and testing sets.
+
+    :param data: The data to split.
+    :param train_fraction: The fraction of data to use for training.
+    :return: The training and testing sets.
+    """
+    n_train = int(data.shape[0] * train_fraction)
+    train_data = data[:n_train, :, :]
+    test_data = data[n_train:, :, :]
+    return train_data, test_data

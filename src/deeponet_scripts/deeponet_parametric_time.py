@@ -14,7 +14,7 @@ from training import (
 
 from plotting import plot_losses
 
-from data import create_dataloader_2D_frac
+from data import create_dataloader_2D
 from training import save_model
 
 
@@ -52,7 +52,7 @@ if __name__ == "__main__":
             N_steps=N_timesteps,
         )
 
-        dataloader_param = create_dataloader_2D_frac(
+        dataloader_param = create_dataloader_2D(
             train_data,
             sensor_locations,
             timesteps,
@@ -61,7 +61,7 @@ if __name__ == "__main__":
             fraction=fraction,
         )
 
-        dataloader_no_param = create_dataloader_2D_frac(
+        dataloader_no_param = create_dataloader_2D(
             train_data[:, :-1, :],
             sensor_locations,
             timesteps,
@@ -76,11 +76,11 @@ if __name__ == "__main__":
         N_steps=N_timesteps,
     )
 
-    dataloader_test_param = create_dataloader_2D_frac(
+    dataloader_test_param = create_dataloader_2D(
         test_data, sensor_locations, timesteps, batch_size=32, shuffle=False
     )
 
-    dataloader_test_no_param = create_dataloader_2D_frac(
+    dataloader_test_no_param = create_dataloader_2D(
         test_data[:, :-1, :],
         sensor_locations,
         timesteps,

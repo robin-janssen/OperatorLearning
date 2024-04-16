@@ -4,7 +4,8 @@ import numpy as np
 
 # from torchinfo import summary
 
-from data import chemicals
+from data.osu_chemicals import chemicals
+from data import create_dataloader_chemicals, load_chemical_data
 from plotting import (
     plot_chemical_examples,
     plot_chemicals_comparative,
@@ -14,19 +15,18 @@ from plotting import (
     plot_relative_errors_over_time,
 )
 from training import (
-    create_dataloader_chemicals,
-    train_multionet_chemical,
+    train_multionet_chemical_2,
     test_deeponet,
     load_multionet,
+    save_model,
 )
-from training import save_model, load_chemical_data, read_yaml_config
+from utils import read_yaml_config
 
 
-if __name__ == "__main__":
-
-    TRAIN = True
-    VIS = False
-    USE_MASS_CONSERVATION = True
+def run(args):
+    TRAIN = True  # args.train
+    VIS = False  # args.vis
+    USE_MASS_CONSERVATION = False
     pretrained_model_path = None  # "models/03-02/multionet_chemical_500_400e.pth"
     branch_input_size = 29
     trunk_input_size = 1
@@ -39,17 +39,17 @@ if __name__ == "__main__":
     output_neurons = 290  # number of neurons in the last layer of MODeepONet
     N_outputs = 29  # number of outputs of MODeepONet
     architecture = "both"  # "both", "branch", "trunk"
-    device = "mps"  # "cpu", "mps"
+    device = args.device
     regularization_factor = 0.013
     massloss_factor = 0.013
 
     if USE_MASS_CONSERVATION:
-        from data import masses
+        from data.osu_chemicals import masses
     else:
         masses = None
 
-    # data = load_chemical_data("data/dataset100")
-    data = load_chemical_data("data/dataset1000")
+    data = load_chemical_data("data/dataset100")
+    # data = load_chemical_data("data/dataset1000")
     data_shape = data.shape
     print(f"Data shape: {data_shape}")
 
@@ -79,10 +79,8 @@ if __name__ == "__main__":
         test_data, timesteps, fraction=1, batch_size=32, shuffle=False
     )
 
-    data_example = next(iter(dataloader_train))
-
     if TRAIN:
-        multionet, train_loss, test_loss = train_multionet_chemical(
+        multionet, train_loss, test_loss = train_multionet_chemical_2(
             dataloader_train,
             masses,
             branch_input_size,
@@ -101,7 +99,7 @@ if __name__ == "__main__":
             architecture=architecture,
             pretrained_model_path=pretrained_model_path,
             device=device,
-            visualize=True,
+            use_streamlit=False,
             regularization_factor=regularization_factor,
             massloss_factor=massloss_factor,
         )
@@ -109,7 +107,7 @@ if __name__ == "__main__":
         # Make sure that the loss history and train time are correct in case of pretrained model
         if pretrained_model_path is not None:
             config = read_yaml_config(pretrained_model_path)
-            train_time = train_multionet_chemical.duration
+            train_time = train_multionet_chemical_2.duration
             train_time += config["train_duration"]
             prev_train_loss, prev_test_loss = np.load(
                 pretrained_model_path.replace(".pth", "_losses.npz")
@@ -118,7 +116,7 @@ if __name__ == "__main__":
             test_loss = np.concatenate((prev_test_loss, test_loss))
             num_epochs += config["num_epochs"]
         else:
-            train_time = train_multionet_chemical.duration
+            train_time = train_multionet_chemical_2.duration
 
         # Save the MulitONet
         save_model(
@@ -185,7 +183,11 @@ if __name__ == "__main__":
 
     # Plot the results
     plot_chemical_results(
-        predictions, ground_truth, extracted_chemicals, num_chemicals=10
+        predictions,
+        ground_truth,
+        extracted_chemicals,
+        "MultiONet for Chemicals",
+        num_chemicals=10,
     )
 
     # Plot the errors

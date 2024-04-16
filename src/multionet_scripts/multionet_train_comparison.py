@@ -20,7 +20,7 @@ from training import (
     test_multionet_poly,
 )
 from training import save_model
-from data import create_dataloader_2D_frac_coeff
+from data import create_dataloader_2D_coeff
 
 if __name__ == "__main__":
     TRAIN = False
@@ -74,7 +74,7 @@ if __name__ == "__main__":
         plot_functions_only(train_data, sensor_locations, 100)
 
     # Create the DataLoaders
-    dataloader = create_dataloader_2D_frac_coeff(
+    dataloader = create_dataloader_2D_coeff(
         train_data,
         train_coeffs,
         sensor_locations,
@@ -84,7 +84,7 @@ if __name__ == "__main__":
         fraction=fraction,
     )
 
-    dataloader_test = create_dataloader_2D_frac_coeff(
+    dataloader_test = create_dataloader_2D_coeff(
         test_data,
         test_coeffs,
         sensor_locations,
