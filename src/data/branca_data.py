@@ -2,6 +2,7 @@ import numpy as np
 import h5py
 
 from plotting import compare_datasets_histogram
+from .data_utils import train_test_split
 
 
 def initialize_branca_data(filepath):
@@ -60,6 +61,72 @@ def branca_subset(filepath):
     print("Saved subset as numpy array")
 
     return data_subset
+
+
+def prepare_branca_data(data, train_cut=300, test_cut=100):
+    """
+    Prepare the Priestley data for training.
+    """
+    timesteps = np.linspace(0, 15, 16)
+    np.random.shuffle(data)
+    train_data, test_data = train_test_split(data, train_fraction=0.8)
+    train_data = train_data[:train_cut, :, :]
+    test_data = test_data[:test_cut, :, :]
+
+    # Find smallest non-zero value in the dataset
+    print("Smallest non-zero value:", np.min(np.abs(train_data[train_data != 0])))
+
+    # Find zero values in the dataset and replace them with the smallest non-zero value
+    zero_indices = np.where(train_data == 0)
+    train_data[zero_indices] = np.min(np.abs(train_data[train_data != 0]))
+    zero_indices = np.where(test_data == 0)
+    test_data[zero_indices] = np.min(np.abs(test_data[test_data != 0]))
+
+    train_data = np.log10(train_data)
+    test_data = np.log10(test_data)
+    return train_data, test_data, timesteps
+
+
+def analyze_branca_data(data):
+    """
+    Analyze the Branca data.
+    """
+    # print("Data min:", np.min(data))
+    # print("Data max:", np.max(data))
+    # print("Data mean:", np.mean(data))
+    # print("Data std:", np.std(data))
+    # initial_conditions = data[:, 0, :]
+    # print("Initial conditions min:", np.min(initial_conditions))
+    # print("Initial conditions max:", np.max(initial_conditions))
+    # print("Initial conditions mean:", np.mean(initial_conditions))
+    # print("Initial conditions std:", np.std(initial_conditions))
+    # for i in range(10):
+    #     initial_cond_chem = initial_conditions[:, i]
+    #     print(f"Chemical {i} min:", np.min(initial_cond_chem))
+    #     print(f"Chemical {i} max:", np.max(initial_cond_chem))
+    #     print(f"Chemical {i} mean:", np.mean(initial_cond_chem))
+    #     print(f"Chemical {i} std:", np.std(initial_cond_chem))
+
+    # Write all prints to a file
+    with open("branca_subset_3_analysis.txt", "w") as f:
+        print("Data min:", np.min(data), file=f)
+        print("Data max:", np.max(data), file=f)
+        print("Data mean:", np.mean(data), file=f)
+        print("Data std:", np.std(data), file=f)
+        print("\n")
+        initial_conditions = data[:, 0, :]
+        print("Initial conditions min:", np.min(initial_conditions), file=f)
+        print("Initial conditions max:", np.max(initial_conditions), file=f)
+        print("Initial conditions mean:", np.mean(initial_conditions), file=f)
+        print("Initial conditions std:", np.std(initial_conditions), file=f)
+        print("\n")
+        for i in range(10):
+            initial_cond_chem = initial_conditions[:, i]
+            print(f"Chemical {i} min:", np.min(initial_cond_chem), file=f)
+            print(f"Chemical {i} max:", np.max(initial_cond_chem), file=f)
+            print(f"Chemical {i} mean:", np.mean(initial_cond_chem), file=f)
+            print(f"Chemical {i} std:", np.std(initial_cond_chem), file=f)
+            print("\n")
 
 
 def run(args):

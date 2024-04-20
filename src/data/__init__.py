@@ -3,6 +3,12 @@ from .priestley_chemicals import (
     load_chemicals_priestley,
     load_and_save_chemicals_priestley,
 )
+from .branca_data import (
+    prepare_branca_data,
+    analyze_branca_data,
+    initialize_branca_data,
+    branca_subset,
+)
 from .spectral_data import load_fc_spectra
 from .data_utils import rbf_kernel, numerical_integration, train_test_split
 from .datagen import (
@@ -31,6 +37,10 @@ __all__ = [
     "load_chemical_data",
     "load_chemicals_priestley",
     "load_and_save_chemicals_priestley",
+    "prepare_branca_data",
+    "analyze_branca_data",
+    "initialize_branca_data",
+    "branca_subset",
     "load_fc_spectra",
     "rbf_kernel",
     "numerical_integration",
