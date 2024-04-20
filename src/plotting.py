@@ -742,13 +742,19 @@ def streamlit_visualization_history(
 
 
 def plot_chemical_examples(
-    data: np.array, names: list[str] | None = None, num_chemicals: int | None = None
+    data: np.array,
+    names: list[str] | None = None,
+    num_chemicals: int | None = None,
+    save: bool = False,
+    title: str = "Chemical Examples",
 ) -> None:
     """Creates four exemplary plots, displaying the amount of each chemical over time.
 
     :param data: 3D numpy array with the chemical data.
     :param names: Optional list of strings with the names of the chemicals.
     :param num_chemicals: Number of chemicals to display. If None, all chemicals are displayed.
+    :param save: Whether to save the plot as an image file.
+    :param title: Title of the plot.
     :return: None
     """
     if num_chemicals is None:
@@ -756,6 +762,7 @@ def plot_chemical_examples(
     if names is None:
         names = [f"Chem {i+1}" for i in range(num_chemicals)]
     plt.subplots(2, 2, figsize=(10, 10))
+    plt.suptitle(title)
     for j in range(4):
         for i in range(num_chemicals):
             plt.subplot(2, 2, j + 1)
@@ -763,23 +770,39 @@ def plot_chemical_examples(
         plt.xlabel("Timestep")
         plt.ylabel("Amount")
         # plt.legend()
+
+    if save:
+        filename = "chemical_examples.png"
+        directory = create_date_based_directory(subfolder="plots")
+        filepath = save_plot_counter(filename, directory)
+        plt.savefig(filepath)
+        print(f"Plot saved as: {filepath}")
+
     plt.show()
 
 
 def plot_chemicals_comparative(
-    data: np.array, names: list[str] | None = None, num_chemicals: int | None = None
+    data: np.array,
+    names: list[str] | None = None,
+    num_chemicals: int | None = None,
+    save: bool = False,
+    title: str = "Chemical Comparison",
 ) -> None:
     """Creates four plots, displaying the evolution of four chemicals over time.
 
     :param data: 3D numpy array with the chemical data.
     :param names: Optional list of strings with the names of the chemicals.
-    :param num_examples: Number of examples to display for each chemical.
+    :param num_chemicals: Number of chemicals to display. If None, all chemicals are displayed.
+    :param save: Whether to save the plot as an image file.
+    :param title: Title of the plot.
+    :return: None
     """
     if num_chemicals is None:
         num_chemicals = data.shape[2]
     if names is None:
         names = [f"Chem {i+1}" for i in range(data.shape[2])]
     plt.subplots(2, 2, figsize=(10, 10))
+    plt.suptitle(title)
     for j in range(4):
         plt.subplot(2, 2, j + 1)
         for i in range(num_chemicals):
@@ -787,6 +810,13 @@ def plot_chemicals_comparative(
         plt.xlabel("Timestep")
         plt.ylabel("Amount")
         # plt.legend()
+    if save:
+        filename = "chemical_comparison.png"
+        directory = create_date_based_directory(subfolder="plots")
+        filepath = save_plot_counter(filename, directory)
+        plt.savefig(filepath)
+        print(f"Plot saved as: {filepath}")
+
     plt.show()
 
 
@@ -874,6 +904,7 @@ def plot_chemical_results(
     names: list[str] | None = None,
     model_names: str | tuple[str, ...] = "Model",
     num_chemicals: int | None = None,
+    save: bool = False,
 ) -> None:
     """
     Plot the results of the chemical predictions.
@@ -884,6 +915,7 @@ def plot_chemical_results(
     :param names: list of strings with the chemical names.
     :param model_names: string or tuple of strings for the prediction labels.
     :param num_chemicals: number of chemicals to plot. None to plot all.
+    :param save: whether to save the plot as an image file.
     """
     # Check if predictions is a tuple of numpy arrays (multiple predictions) or a single numpy array
     if not isinstance(predictions, tuple):
@@ -930,6 +962,14 @@ def plot_chemical_results(
         handles, labels = ax[0, 0].get_legend_handles_labels()
         fig.legend(handles, labels, loc="center right", bbox_to_anchor=(1.05, 0.5))
     plt.tight_layout(rect=[0, 0, 0.85, 1])
+
+    if save:
+        filename = "chemical_predictions.png"
+        directory = create_date_based_directory(subfolder="plots")
+        filepath = save_plot_counter(filename, directory)
+        plt.savefig(filepath)
+        print(f"Plot saved as: {filepath}")
+
     plt.show()
 
 
@@ -1252,4 +1292,71 @@ def plot_spectrum_predictions(
         print(f"Plot saved as: {filepath}")
 
     plt.tight_layout()
+    plt.show()
+
+
+def compare_datasets_histogram(dataset1, dataset2, dataset3, save=False):
+    """
+    Compare three datasets using histograms for each of their columns.
+
+    :param dataset1: numpy array of shape [num_samples, 10]
+    :param dataset2: numpy array of shape [num_samples, 10]
+    :param dataset3: numpy array of shape [num_samples, 10]
+    :param save: whether to save the plot as a file
+    """
+    num_columns = dataset1.shape[1]
+    fig, axes = plt.subplots(nrows=num_columns, ncols=1, figsize=(10, 30))
+
+    # Iterate over each quantity (column)
+    for i in range(num_columns):
+        ax = axes[i]
+        # Find the range for the histograms
+        combined_data = np.concatenate((dataset1[:, i], dataset2[:, i], dataset3[:, i]))
+
+        data_range = (np.min(combined_data), np.max(combined_data))
+        data_range = (1e-10, data_range[1]) if data_range[0] == 0 else data_range
+
+        logbins = np.logspace(np.log10(data_range[0]), np.log10(data_range[1]), 50)
+
+        # Plot histograms for each dataset in the current subplot
+        # Make the xscale logarithmic for better visualization
+        ax.hist(
+            dataset1[:, i],
+            bins=logbins,
+            range=data_range,
+            alpha=0.3,
+            label="Dataset 1",
+            density=True,
+        )
+        ax.hist(
+            dataset2[:, i],
+            bins=logbins,
+            range=data_range,
+            alpha=0.3,
+            label="Dataset 2",
+            density=True,
+        )
+        ax.hist(
+            dataset3[:, i],
+            bins=logbins,
+            range=data_range,
+            alpha=0.3,
+            label="Dataset 3",
+            density=True,
+        )
+
+        ax.set_xscale("log")
+
+        ax.set_title(f"Quantity {i + 1}")
+        ax.legend()
+
+    plt.tight_layout()
+
+    if save:
+        filename = f"dataset_comparison_quantity_{i + 1}.png"
+        directory = create_date_based_directory(subfolder="plots")
+        filepath = save_plot_counter(filename, directory)
+        plt.savefig(filepath)
+        print(f"Plot saved as: {filepath}")
+
     plt.show()

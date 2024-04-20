@@ -367,16 +367,25 @@ def train_multionet_chemical(
         train_loss_hist[epoch] = training_step(
             deeponet, data_loader, criterion, optimizer, device, conf.N_outputs
         )
+
         if conf.optuna_trial is not None:
             conf.optuna_trial.report(train_loss_hist[epoch], epoch)
             if conf.optuna_trial.should_prune():
                 raise optuna.TrialPruned()
+
         clr = optimizer.param_groups[0]["lr"]
         progress_bar.set_postfix({"loss": train_loss_hist[epoch], "lr": clr})
         scheduler.step()
+
         if test_loader is not None:
             test_loss_hist[epoch], outputs, targets = test_deeponet(
-                deeponet, test_loader, device, criterion, conf.N_timesteps
+                deeponet,
+                test_loader,
+                device,
+                criterion,
+                conf.N_timesteps,
+                reshape=True,
+                transpose=True,
             )
             output_hist[epoch] = outputs[:3]
             if epoch == 0:
@@ -1035,7 +1044,7 @@ def load_multionet(
             - 'architecture' (str): Architecture type, e.g., 'both', 'branch', or 'trunk'.
             - 'device' (str): The device to use for the model, e.g., 'cpu', 'cuda:0'.
         device (str): The device to use for the model.
-        model_path (str): Path to the saved state dictionary. Should have the extension '.pth'.
+        model_path (str): Path to the saved state dictionary. As seen from the parent directory of src. Should not have a file extension.
 
     Returns:
         deeponet: Loaded DeepONet model.

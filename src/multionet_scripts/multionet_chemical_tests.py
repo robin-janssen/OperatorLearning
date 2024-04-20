@@ -1,4 +1,4 @@
-# This script is used to train a MultiONet for the chemical dataset and visualize the results.
+# This script is used to train a MultiONet for the (osu) chemical dataset and visualize the results.
 
 import numpy as np
 

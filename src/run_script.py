@@ -93,7 +93,8 @@ def main():
         "--script",
         type=str,
         # default="multionet_scripts.multionet_pchemicals_tests.run",
-        default="deeponet_scripts.deeponet_spectra_fc.run",
+        # default="deeponet_scripts.deeponet_spectra_fc.run",
+        default="multionet_scripts.multionet_bchemicals_tests.run",
         help="Path to the script to run, e.g., 'deeponet_scripts.deeponet_training.run'",
     )
 

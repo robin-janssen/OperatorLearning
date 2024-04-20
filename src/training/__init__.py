@@ -1,4 +1,8 @@
-from .config_classes import PChemicalTrainConfig, SpectraTrainConfig
+from .config_classes import (
+    PChemicalTrainConfig,
+    BChemicalTrainConfig,
+    SpectraTrainConfig,
+)
 
 from .train_deeponet import (
     train_deeponet,
@@ -29,6 +33,7 @@ from .train_utils import (
 
 __all__ = [
     "PChemicalTrainConfig",
+    "BChemicalTrainConfig",
     "SpectraTrainConfig",
     "train_deeponet",
     "train_deeponet_visualized",
