@@ -37,12 +37,12 @@ class BChemicalTrainConfig:
     masses: Optional[list[float]] = None
     branch_input_size: int = 10
     trunk_input_size: int = 1
-    hidden_size: int = 150
+    hidden_size: int = 250
     branch_hidden_layers: int = 4
-    trunk_hidden_layers: int = 5
-    output_neurons: int = 200
+    trunk_hidden_layers: int = 4
+    output_neurons: int = 360
     N_outputs: int = 10
-    num_epochs: int = 100
+    num_epochs: int = 500
     learning_rate: float = 1e-4
     schedule: bool = False
     N_sensors: int = 10

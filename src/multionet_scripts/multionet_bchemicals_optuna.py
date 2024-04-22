@@ -8,7 +8,12 @@ from functools import partial
 
 from data import create_dataloader_chemicals
 from training import BChemicalTrainConfig, train_multionet_chemical
-from optuna.visualization import plot_optimization_history, plot_param_importances
+from optuna.visualization import (
+    plot_optimization_history,
+    plot_param_importances,
+    plot_parallel_coordinate,
+    plot_intermediate_values,
+)
 
 
 # Define the objective function for the Optuna study
@@ -51,20 +56,26 @@ def run(args):
     study_name = "multionet_bchemicals"
     storage_name = f"sqlite:///optuna/{study_name}.db"
     SEED = 42
+    STUDY = False
 
-    pruner = optuna.pruners.MedianPruner(n_warmup_steps=10, n_startup_trials=10)
-    sampler = optuna.samplers.TPESampler(seed=SEED)
+    if STUDY:
 
-    study = optuna.create_study(
-        study_name=study_name,
-        storage=storage_name,
-        load_if_exists=True,
-        direction="minimize",
-        sampler=sampler,
-        pruner=pruner,
-    )
-    objective_with_args = partial(objective, args=args)
-    study.optimize(objective_with_args, n_trials=200)
+        pruner = optuna.pruners.MedianPruner(n_warmup_steps=10, n_startup_trials=10)
+        sampler = optuna.samplers.TPESampler(seed=SEED)
+
+        study = optuna.create_study(
+            study_name=study_name,
+            storage=storage_name,
+            load_if_exists=True,
+            direction="minimize",
+            sampler=sampler,
+            pruner=pruner,
+        )
+        objective_with_args = partial(objective, args=args)
+        study.optimize(objective_with_args, n_trials=200)
+
+    else:
+        study = optuna.load_study(study_name=study_name, storage=storage_name)
 
     print("Best trial:")
     print("  Value: ", study.best_trial.value)
@@ -75,6 +86,8 @@ def run(args):
     # Visualization (Optional)
     plot_optimization_history(study).show()
     plot_param_importances(study).show()
+    plot_parallel_coordinate(study).show()
+    plot_intermediate_values(study).show()
 
 
 if __name__ == "__main__":
