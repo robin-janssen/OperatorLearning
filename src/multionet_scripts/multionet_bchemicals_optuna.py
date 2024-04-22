@@ -6,7 +6,7 @@ import optuna
 import numpy as np
 from functools import partial
 
-from data import create_dataloader_chemicals, prepare_branca_data
+from data import create_dataloader_chemicals
 from training import BChemicalTrainConfig, train_multionet_chemical
 from optuna.visualization import plot_optimization_history, plot_param_importances
 
@@ -26,28 +26,24 @@ def objective(trial, args):
     )
 
     # Load data and create dataloaders
-    data = np.load("/export/scratch/rjanssen/branca_data/dataset_reshaped_subset.npy")
-
-    train_data, test_data, timesteps = prepare_branca_data(
-        data, train_cut=50000, test_cut=10000
-    )
+    train_data = np.load("data/branca_data/train_data.npy")
+    test_data = np.load("data/branca_data/test_data.npy")
+    timesteps = np.linspace(0, 15, 16)
 
     dataloader_train = create_dataloader_chemicals(
         train_data, timesteps, fraction=1, batch_size=config.batch_size, shuffle=True
     )
 
-    # dataloader_test = create_dataloader_chemicals(
-    #     test_data, timesteps, fraction=1, batch_size=config.batch_size, shuffle=False
-    # )
-
-    # Train the model
-    _, train_loss, _ = train_multionet_chemical(
-        config, dataloader_train  # , dataloader_test
+    dataloader_test = create_dataloader_chemicals(
+        test_data, timesteps, fraction=1, batch_size=config.batch_size, shuffle=False
     )
 
-    return np.mean(
-        train_loss[-5:]
-    )  # Use the average of the last 5 epochs' test loss as the objective value
+    # Train the model
+    _, _, test_loss = train_multionet_chemical(
+        config, dataloader_train, dataloader_test
+    )
+
+    return np.mean(test_loss[-5:])
 
 
 # Optuna study setup
@@ -68,7 +64,7 @@ def run(args):
         pruner=pruner,
     )
     objective_with_args = partial(objective, args=args)
-    study.optimize(objective_with_args, n_trials=100)
+    study.optimize(objective_with_args, n_trials=200)
 
     print("Best trial:")
     print("  Value: ", study.best_trial.value)

@@ -53,10 +53,10 @@ def branca_subset(filepath):
     # data_subset = data_new[indices]
     # print("Shape of subset:", data_subset.shape)
 
-    data_subset = data_new[::5]
+    data_subset = data_new[::300]
 
     # Save subset as numpy array
-    save_path = filepath.replace(".h5", "_subset_3.npy")
+    save_path = filepath.replace(".h5", "_subset_0.npy")
     np.save(save_path, data_subset)
     print("Saved subset as numpy array")
 
@@ -74,7 +74,7 @@ def prepare_branca_data(data, train_cut=300, test_cut=100):
     test_data = test_data[:test_cut, :, :]
 
     # Find smallest non-zero value in the dataset
-    print("Smallest non-zero value:", np.min(np.abs(train_data[train_data != 0])))
+    # print("Smallest non-zero value:", np.min(np.abs(train_data[train_data != 0])))
 
     # Find zero values in the dataset and replace them with the smallest non-zero value
     zero_indices = np.where(train_data == 0)
@@ -135,16 +135,28 @@ def run(args):
     # new_path = initialize_branca_data(filepath)
     # data_subset = branca_subset(new_path)
 
-    data = np.load("/export/scratch/rjanssen/branca_data/dataset_reshaped_subset.npy")
-    data1 = data[:, 0, :]
+    data = np.load("/export/scratch/rjanssen/branca_data/dataset_reshaped_subset_0.npy")
+    data0 = data[:, 0, :]
+    # data = np.load("/export/scratch/rjanssen/branca_data/dataset_reshaped_subset.npy")
+    # data1 = data[:, 0, :]
     data = np.load("/export/scratch/rjanssen/branca_data/dataset_reshaped_subset_2.npy")
     data2 = data[:, 0, :]
     data = np.load("/export/scratch/rjanssen/branca_data/dataset_reshaped_subset_3.npy")
     data3 = data[:, 0, :]
 
-    compare_datasets_histogram(data1, data2, data3, save=True)
+    compare_datasets_histogram(data0, data2, data3, save=True)
 
     # print("Shape:", data.shape)
+
+    # data = np.load("/export/scratch/rjanssen/branca_data/dataset_reshaped_subset_0.npy")
+
+    # analyze_branca_data(data)
+
+    # train_data, test_data, timesteps = prepare_branca_data(
+    #     data, train_cut=50000, test_cut=10000
+    # )
+
+    # print("Shape:", test_data.shape)
 
 
 if __name__ == "__main__":
