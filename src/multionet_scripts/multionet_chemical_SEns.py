@@ -1,5 +1,5 @@
 # This script is used to train a MultiONet for the chemical dataset and to obtain estimates of the predictive uncertainty.
-
+# The UQ is obtained used the stochastic ensemble approach, where the ensemble os obtained from a cyclic learning rate schedule.
 import numpy as np
 import matplotlib.pyplot as plt
 

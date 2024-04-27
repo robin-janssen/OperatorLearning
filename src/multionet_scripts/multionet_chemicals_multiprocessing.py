@@ -1,4 +1,5 @@
 # This script utilizes multiprocessing to train multiple models on individual GPUs.
+# This speeds up the training of a deep ensemble used for UQ purposes.
 
 import multiprocessing
 import numpy as np

@@ -1,3 +1,6 @@
+# This script is used to load a DeepONet ensemble trained on a chemicals dataset (e.g. osu) and evaluate the ensemble on a test set.
+# The resulting plots are for UQ purposes. It would also be possible to use the UQ metrics for active learning or to decide when to use a numerical method.
+
 import os
 import yaml
 import numpy as np

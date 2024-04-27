@@ -1,3 +1,6 @@
+# This script implements an OPTUNA study to optimize the hyperparameters of a MultiONet for the priestley dataset.
+
+
 # Import necessary libraries
 import optuna
 import os

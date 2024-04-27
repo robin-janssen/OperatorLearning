@@ -236,6 +236,7 @@ def test_deeponet(
     N_timesteps=101,
     timing=False,
     transpose=False,
+    reshape=False,
 ) -> tuple:
     """
     Test a DeepONet model.
@@ -247,6 +248,7 @@ def test_deeponet(
     :param N_timesteps: Number of timesteps.
     :param timing: Whether to time the testing process.
     :param transpose: Whether to transpose the last two dimensions of the output arrays.
+    :param reshape: Whether to reshape the output arrays.
 
     :return: Total loss and predictions.
     """
@@ -308,9 +310,9 @@ def test_deeponet(
     # Calculate relative error
     total_loss /= dataset_size * targetsize
 
-    # preds_buffer = preds_buffer.reshape(-1, N_timesteps, targetsize)
-
-    # targets_buffer = targets_buffer.reshape(-1, N_timesteps, targetsize)
+    if reshape:
+        preds_buffer = preds_buffer.reshape(-1, N_timesteps, targetsize)
+        targets_buffer = targets_buffer.reshape(-1, N_timesteps, targetsize)
 
     if transpose:
         preds_buffer = preds_buffer.transpose(0, 2, 1)

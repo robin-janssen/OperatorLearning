@@ -5,6 +5,8 @@ from optuna import Trial
 
 @dataclass
 class PChemicalTrainConfig:
+    """Dataclass for the configuration of a multionet model for the priestley chemicals dataset."""
+
     masses: Optional[list[float]] = None
     branch_input_size: int = 216
     trunk_input_size: int = 1
@@ -29,7 +31,36 @@ class PChemicalTrainConfig:
 
 
 @dataclass
+class BChemicalTrainConfig:
+    """Dataclass for the configuration of a multionet model for the branca chemicals dataset."""
+
+    masses: Optional[list[float]] = None
+    branch_input_size: int = 10
+    trunk_input_size: int = 1
+    hidden_size: int = 250
+    branch_hidden_layers: int = 4
+    trunk_hidden_layers: int = 4
+    output_neurons: int = 360
+    N_outputs: int = 10
+    num_epochs: int = 500
+    learning_rate: float = 3e-5
+    schedule: bool = False
+    N_sensors: int = 10
+    N_timesteps: int = 16
+    architecture: str = "both"
+    pretrained_model_path: Optional[str] = None
+    device: str = "cuda:0"
+    use_streamlit: bool = False
+    optuna_trial: Trial | None = None
+    regularization_factor: float = 0.0
+    massloss_factor: float = 0.0
+    batch_size: int = 512
+
+
+@dataclass
 class SpectraTrainConfig:
+    """Dataclass for the configuration of a multionet model for the spectral dataset."""
+
     branch_input_size: int = 92
     trunk_input_size: int = 2
     hidden_size: int = 100

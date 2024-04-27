@@ -54,7 +54,7 @@ def numerical_integration(
     return antiderivative
 
 
-def train_test_split(data: np.array, train_fraction: float = 0.8, cutoff: int = None):
+def train_test_split(data: np.array, train_fraction: float = 0.8):
     """
     Split the data into training and testing sets.
 
