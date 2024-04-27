@@ -184,7 +184,7 @@ def main():
     parser.add_argument(
         "--device",
         type=str,
-        default="cuda:9",
+        default="cuda:7",
         # choices=["cpu", "mps", "cuda"],
         help="Device to use for training.",
     )

@@ -1314,7 +1314,7 @@ def compare_datasets_histogram(dataset1, dataset2, dataset3, save=False):
         combined_data = np.concatenate((dataset1[:, i], dataset2[:, i], dataset3[:, i]))
 
         data_range = (np.min(combined_data), np.max(combined_data))
-        data_range = (1e-10, data_range[1]) if data_range[0] == 0 else data_range
+        data_range = (1e-10, data_range[1]) if data_range[0] <= 0 else data_range
 
         logbins = np.logspace(np.log10(data_range[0]), np.log10(data_range[1]), 50)
 
@@ -1325,7 +1325,7 @@ def compare_datasets_histogram(dataset1, dataset2, dataset3, save=False):
             bins=logbins,
             range=data_range,
             alpha=0.3,
-            label="Dataset 1",
+            label="Train data (1e6)",
             density=True,
         )
         ax.hist(
@@ -1333,7 +1333,7 @@ def compare_datasets_histogram(dataset1, dataset2, dataset3, save=False):
             bins=logbins,
             range=data_range,
             alpha=0.3,
-            label="Dataset 2",
+            label="Test data (3e5)",
             density=True,
         )
         ax.hist(
@@ -1341,7 +1341,7 @@ def compare_datasets_histogram(dataset1, dataset2, dataset3, save=False):
             bins=logbins,
             range=data_range,
             alpha=0.3,
-            label="Dataset 3",
+            label="Biggest dataset (13.4e6)",
             density=True,
         )
 
@@ -1353,7 +1353,7 @@ def compare_datasets_histogram(dataset1, dataset2, dataset3, save=False):
     plt.tight_layout()
 
     if save:
-        filename = f"dataset_comparison_quantity_{i + 1}.png"
+        filename = "branca_dataset_comparison.png"
         directory = create_date_based_directory(subfolder="plots")
         filepath = save_plot_counter(filename, directory)
         plt.savefig(filepath)

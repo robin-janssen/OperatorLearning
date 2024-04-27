@@ -67,7 +67,10 @@ def prepare_branca_data(data, train_cut=300, test_cut=100):
     """
     Prepare the Priestley data for training.
     """
+    train_cut = int(train_cut)
+    test_cut = int(test_cut)
     timesteps = np.linspace(0, 15, 16)
+    print(data.shape)
     np.random.shuffle(data)
     train_data, test_data = train_test_split(data, train_fraction=0.8)
     train_data = train_data[:train_cut, :, :]
@@ -135,16 +138,47 @@ def run(args):
     # new_path = initialize_branca_data(filepath)
     # data_subset = branca_subset(new_path)
 
-    data = np.load("/export/scratch/rjanssen/branca_data/dataset_reshaped_subset_0.npy")
-    data0 = data[:, 0, :]
+    # data = np.load("/export/scratch/rjanssen/branca_data/dataset_reshaped_subset_0.npy")
+    # data0 = data[:, 0, :]
     # data = np.load("/export/scratch/rjanssen/branca_data/dataset_reshaped_subset.npy")
     # data1 = data[:, 0, :]
-    data = np.load("/export/scratch/rjanssen/branca_data/dataset_reshaped_subset_2.npy")
-    data2 = data[:, 0, :]
-    data = np.load("/export/scratch/rjanssen/branca_data/dataset_reshaped_subset_3.npy")
-    data3 = data[:, 0, :]
+    data2 = np.load(
+        "/export/scratch/rjanssen/branca_data/dataset_reshaped_subset_2.npy"
+    )
+    data3 = np.load(
+        "/export/scratch/rjanssen/branca_data/dataset_reshaped_subset_3.npy"
+    )
+    print("Shape:", data3.shape)
 
-    compare_datasets_histogram(data0, data2, data3, save=True)
+    train_data, test_data, _ = prepare_branca_data(data2, train_cut=1e5, test_cut=3e4)
+
+    # Save the training and test data
+    np.save(
+        "/export/home/rjanssen/OperatorLearning/data/branca_data/train_data_1e5.npy",
+        train_data,
+    )
+    np.save(
+        "/export/home/rjanssen/OperatorLearning/data/branca_data/test_data_3e4.npy",
+        test_data,
+    )
+
+    # For dataset comparison
+    train_data = train_data[:, 0, :]
+    test_data = test_data[:, 0, :]
+    data2 = data2[:, 0, :]
+    data3 = data3[:, 0, :]
+
+    # Treat the large dataset like train and test data
+    zero_indices = np.where(data3 == 0)
+    data3[zero_indices] = np.min(np.abs(data3[data3 != 0]))
+    data3 = np.log10(data3)
+
+    # Take the power of the log to get the original data
+    train_data = np.power(10, train_data)
+    test_data = np.power(10, test_data)
+    data3 = np.power(10, data3)
+
+    compare_datasets_histogram(train_data, test_data, data3, save=True)
 
     # print("Shape:", data.shape)
 

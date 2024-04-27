@@ -25,14 +25,18 @@ def objective(trial, args):
         output_neurons=10 * trial.suggest_int("output_neurons", 10, 50),
         branch_hidden_layers=trial.suggest_int("branch_hidden_layers", 3, 7),
         trunk_hidden_layers=trial.suggest_int("trunk_hidden_layers", 3, 7),
-        learning_rate=trial.suggest_float("learning_rate", 1e-7, 1e-3, log=True),
+        architecture=trial.suggest_categorical(
+            "architecture", ["both", "branch", "trunk"]
+        ),
+        learning_rate=3e-5,
         optuna_trial=trial,
         device=args.device,
+        num_epochs=100,
     )
 
     # Load data and create dataloaders
-    train_data = np.load("data/branca_data/train_data.npy")
-    test_data = np.load("data/branca_data/test_data.npy")
+    train_data = np.load("data/branca_data/train_data_1e5.npy")
+    test_data = np.load("data/branca_data/test_data_3e4.npy")
     timesteps = np.linspace(0, 15, 16)
 
     dataloader_train = create_dataloader_chemicals(
@@ -53,10 +57,10 @@ def objective(trial, args):
 
 # Optuna study setup
 def run(args):
-    study_name = "multionet_bchemicals"
+    study_name = "multionet_bchemicals_fixedlr"
     storage_name = f"sqlite:///optuna/{study_name}.db"
     SEED = 42
-    STUDY = False
+    STUDY = True
 
     if STUDY:
 

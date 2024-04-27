@@ -352,6 +352,7 @@ def train_multionet_chemical(
     :return: Trained DeepONet model and loss history.
     """
     device = torch.device(conf.device)
+    print(f"Starting training on device {device}")
 
     deeponet, train_loss, test_loss = load_multionet(conf, device)
 

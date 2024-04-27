@@ -43,7 +43,7 @@ class BChemicalTrainConfig:
     output_neurons: int = 360
     N_outputs: int = 10
     num_epochs: int = 500
-    learning_rate: float = 1e-4
+    learning_rate: float = 3e-5
     schedule: bool = False
     N_sensors: int = 10
     N_timesteps: int = 16

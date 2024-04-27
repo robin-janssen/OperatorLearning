@@ -3,8 +3,8 @@ import numpy as np
 
 from data import (
     create_dataloader_chemicals,
-    analyze_branca_data,
-    prepare_branca_data,
+    # analyze_branca_data,
+    # prepare_branca_data,
 )
 from training import (
     BChemicalTrainConfig,
@@ -27,15 +27,28 @@ def run(args):
     config = BChemicalTrainConfig()
     # config.device = args.device
     TRAIN = True
-    args.vis = True
+    args.vis = False
+    config.device = args.device
 
     # Load the data
-
-    data = np.load("/export/scratch/rjanssen/branca_data/dataset_reshaped_subset_3.npy")
-    analyze_branca_data(data)
-    train_data, test_data, timesteps = prepare_branca_data(
-        data, train_cut=500000, test_cut=100000
+    # data = np.load("/export/scratch/rjanssen/branca_data/dataset_reshaped_subset_1.npy")
+    # data = np.load("/export/scratch/rjanssen/branca_data/dataset_reshaped_subset_2.npy")
+    # print(f"Loaded Branca data with shape: {data.shape}")
+    # analyze_branca_data(data)
+    # train_data, test_data, timesteps = prepare_branca_data(
+    #     data, train_cut=500000, test_cut=100000
+    # )
+    train_data = np.load(
+        "/export/home/rjanssen/OperatorLearning/data/branca_data/train_data_1e6.npy"
     )
+    config.train_size = train_data.shape[0]
+    test_data = np.load(
+        "/export/home/rjanssen/OperatorLearning/data/branca_data/test_data_3e5.npy"
+    )
+    config.test_size = test_data.shape[0]
+    print(f"Loaded Branca data with shape: {train_data.shape}/{test_data.shape}")
+
+    timesteps = np.linspace(0, 15, 16)
 
     print(f"Time steps: {timesteps}")
 
@@ -73,14 +86,14 @@ def run(args):
         # Save the MulitONet
         save_model(
             multionet,
-            "multionet_bchemicals_3",
+            "multionet_bchemicals_1e6",
             config,
             train_loss=train_loss,
             test_loss=test_loss,
         )
 
     else:
-        model_path = "models/04-18/multionet_bchemicals_3"
+        model_path = "models/04-18/multionet_bchemicals_1e6"
         multionet, train_loss, test_loss = load_multionet(
             config, config.device, model_path
         )
@@ -110,7 +123,7 @@ def run(args):
 
     plot_relative_errors_over_time(
         relative_errors,
-        "Relative errors over time (MultiONet for Chemicals)",
+        "Relative errors over time (MultiONet1 for Chemicals)",
         save=True,
     )
 
@@ -119,7 +132,7 @@ def run(args):
         ground_truth=ground_truth,
         # names=extracted_chemicals,
         num_chemicals=10,
-        model_names="MultiONet",
+        model_names="MultiONet1",
         save=True,
     )
 
