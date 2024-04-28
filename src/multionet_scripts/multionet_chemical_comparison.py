@@ -3,7 +3,7 @@
 
 import numpy as np
 
-from data.osu_chemicals import chemicals
+from data.osu_chemicals import osu_chemicals
 from plotting import (
     plot_chemical_examples,
     plot_chemicals_comparative,
@@ -37,7 +37,7 @@ def run(args):
     device = "mps"  # "cpu", "mps"
 
     # if USE_MASS_CONSERVATION:
-    #     from data.osu_chemicals import masses
+    #     from data.osu_chemicals import osu_masses
     # else:
     #     masses = None
 

@@ -2,6 +2,8 @@ from dataclasses import dataclass
 from typing import Optional
 from optuna import Trial
 
+from data.osu_chemicals import osu_masses
+
 
 @dataclass
 class PChemicalTrainConfig:
@@ -55,6 +57,33 @@ class BChemicalTrainConfig:
     regularization_factor: float = 0.0
     massloss_factor: float = 0.0
     batch_size: int = 512
+
+
+@dataclass
+class OChemicalTrainConfig:
+    """Dataclass for the configuration of a multionet model for the osu chemicals dataset."""
+
+    masses: Optional[list[float]] = osu_masses
+    branch_input_size: int = 29
+    trunk_input_size: int = 1
+    hidden_size: int = 100
+    branch_hidden_layers: int = 5
+    trunk_hidden_layers: int = 5
+    output_neurons: int = 290
+    N_outputs: int = 29
+    num_epochs: int = 500
+    learning_rate: float = 3e-4
+    schedule: bool = False
+    N_sensors: int = 29
+    N_timesteps: int = 100
+    architecture: str = "both"
+    pretrained_model_path: Optional[str] = None
+    device: str = "cuda:0"
+    use_streamlit: bool = False
+    optuna_trial: Trial | None = None
+    regularization_factor: float = 0.012
+    massloss_factor: float = 0.012
+    batch_size: int = 256
 
 
 @dataclass

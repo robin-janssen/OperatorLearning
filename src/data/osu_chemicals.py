@@ -1,7 +1,10 @@
 import os
 import numpy as np
 
+print(os.getcwd())
+
 from utils import get_project_path
+from .data_utils import train_test_split
 
 
 def load_chemical_data(data_folder, file_extension=".dat", separator=" "):
@@ -35,8 +38,8 @@ def load_chemical_data(data_folder, file_extension=".dat", separator=" "):
     return all_data
 
 
-chemicals = "H, H+, H2, H2+, H3+, O, O+, OH+, OH, O2, O2+, H2O, H2O+, H3O+, C, C+, CH, CH+, CH2, CH2+, CH3, CH3+, CH4, CH4+, CH5+, CO, CO+, HCO+, He, He+, E"
-masses = [
+osu_chemicals = "H, H+, H2, H2+, H3+, O, O+, OH+, OH, O2, O2+, H2O, H2O+, H3O+, C, C+, CH, CH+, CH2, CH2+, CH3, CH3+, CH4, CH4+, CH5+, CO, CO+, HCO+, He, He+, E"
+osu_masses = [
     12.011,
     12.011,
     13.019,
@@ -67,3 +70,13 @@ masses = [
     17.007,
     17.007,
 ]
+
+
+def run(args):
+    chemical_data = load_chemical_data("data/dataset1000")
+    train_data, test_data = train_test_split(chemical_data, train_fraction=0.8)
+    train_data = train_data[:, :, :29]
+    test_data = test_data[:, :, :29]
+    print(f"Loaded chemical data with shape: {train_data.shape}/{test_data.shape}")
+    np.save("data/osu_data/train_data.npy", train_data)
+    np.save("data/osu_data/test_data.npy", test_data)
