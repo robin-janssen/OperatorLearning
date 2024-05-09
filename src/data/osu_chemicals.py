@@ -74,9 +74,12 @@ osu_masses = [
 
 def run(args):
     chemical_data = load_chemical_data("data/dataset1000")
+    chemical_data = chemical_data[:, :, :29]
+    print(f"Loaded chemical data with shape: {chemical_data.shape}")
+    np.random.shuffle(chemical_data)
+    print("Shuffled chemical data!")
     train_data, test_data = train_test_split(chemical_data, train_fraction=0.8)
-    train_data = train_data[:, :, :29]
-    test_data = test_data[:, :, :29]
     print(f"Loaded chemical data with shape: {train_data.shape}/{test_data.shape}")
     np.save("data/osu_data/train_data.npy", train_data)
     np.save("data/osu_data/test_data.npy", test_data)
+    print("Saved chemical data.")

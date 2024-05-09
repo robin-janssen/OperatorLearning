@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional
 from optuna import Trial
 
@@ -63,7 +63,7 @@ class BChemicalTrainConfig:
 class OChemicalTrainConfig:
     """Dataclass for the configuration of a multionet model for the osu chemicals dataset."""
 
-    masses: Optional[list[float]] = osu_masses
+    masses: Optional[list[float]] = field(default_factory=lambda: osu_masses)
     branch_input_size: int = 29
     trunk_input_size: int = 1
     hidden_size: int = 100
@@ -83,7 +83,7 @@ class OChemicalTrainConfig:
     optuna_trial: Trial | None = None
     regularization_factor: float = 0.012
     massloss_factor: float = 0.012
-    batch_size: int = 256
+    batch_size: int = 128
 
 
 @dataclass

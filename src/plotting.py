@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from matplotlib import cm
 from matplotlib import rcParams
 from matplotlib.colors import Normalize
+from typing import Optional
 from itertools import cycle
 import numpy as np
 import streamlit as st
@@ -905,6 +906,7 @@ def plot_chemical_results(
     model_names: str | tuple[str, ...] = "Model",
     num_chemicals: int | None = None,
     save: bool = False,
+    title: str = "Chemical Predictions",
 ) -> None:
     """
     Plot the results of the chemical predictions.
@@ -933,7 +935,7 @@ def plot_chemical_results(
     alphas = np.linspace(0.5, 1, len(predictions))
 
     fig, ax = plt.subplots(2, 2, figsize=(10, 8))
-    plt.suptitle("Chemical predictions")
+    plt.suptitle(title)
     for i in range(4):
         for j in range(num_chemicals):
             # Plot each set of predictions
@@ -1354,6 +1356,47 @@ def compare_datasets_histogram(dataset1, dataset2, dataset3, save=False):
 
     if save:
         filename = "branca_dataset_comparison.png"
+        directory = create_date_based_directory(subfolder="plots")
+        filepath = save_plot_counter(filename, directory)
+        plt.savefig(filepath)
+        print(f"Plot saved as: {filepath}")
+
+    plt.show()
+
+
+def plot_generalization_errors(
+    metrics: np.array,
+    model_errors: np.array,
+    title: Optional[str] = None,
+    interpolate: bool = True,
+    save: bool = False,
+) -> None:
+    """
+    Plot the interpolation or extrapolation errors of a model.
+
+    Args:
+        metrics: Numpy array containing the generalization metric (interpolation interval or extrapolation cutoff) values.
+        model_errors: Numpy array containing the model errors.
+        title: Optional title for the plot.
+        interpolate: Whether the plot comes from interpolation or extrapolation.
+        save: Whether to save the plot as a file.
+
+    Returns:
+        None
+    """
+    plt.scatter(metrics, model_errors)
+    xlabel = "Interpolation Interval" if interpolate else "Extrapolation Cutoff"
+    plt.xlabel(xlabel)
+    plt.ylabel("Mean Absolute Error")
+    plt.yscale("log")
+    if title is None:
+        title = "Interpolation Errors" if interpolate else "Extrapolation Errors"
+    plt.title(title)
+
+    if save:
+        filename = (
+            "interpolation_errors.png" if interpolate else "extrapolation_errors.png"
+        )
         directory = create_date_based_directory(subfolder="plots")
         filepath = save_plot_counter(filename, directory)
         plt.savefig(filepath)
