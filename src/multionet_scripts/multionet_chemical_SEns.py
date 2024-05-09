@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 # from torchinfo import summary
 
-from data.osu_chemicals import chemicals
+from data.osu_chemicals import osu_chemicals
 from plotting import (
     plot_chemical_examples,
     plot_chemicals_comparative,
@@ -46,7 +46,7 @@ if __name__ == "__main__":
     massloss_factor = 0.013
 
     if USE_MASS_CONSERVATION:
-        from data import masses
+        from data import osu_masses
     else:
         masses = None
 

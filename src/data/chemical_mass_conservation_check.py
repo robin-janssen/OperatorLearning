@@ -1,6 +1,6 @@
 import numpy as np
 
-from osu_chemicals import masses
+from osu_chemicals import osu_masses
 from plotting import plot_mass_conservation
 from utils import load_chemical_data
 

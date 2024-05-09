@@ -11,7 +11,7 @@ from plotting import (
     visualise_deep_ensemble,
 )
 from data import create_dataloader_chemicals, load_chemical_data
-from data.osu_chemicals import chemicals
+from data.osu_chemicals import osu_chemicals
 
 
 def load_model_and_losses(directory, device="cpu"):

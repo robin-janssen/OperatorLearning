@@ -60,7 +60,7 @@ def run(args):
     study_name = "multionet_bchemicals_fixedlr"
     storage_name = f"sqlite:///optuna/{study_name}.db"
     SEED = 42
-    STUDY = True
+    STUDY = False
 
     if STUDY:
 

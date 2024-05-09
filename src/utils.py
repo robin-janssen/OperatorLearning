@@ -83,6 +83,21 @@ def get_project_path(relative_path):
     return project_resource_path
 
 
+def list_pth_files(directory: str = "models") -> list[str]:
+    """
+    List all .pth files in the specified directory without their extensions.
+
+    Args:
+        directory (str): The directory to search for .pth files.
+
+    Returns:
+        list[str]: A list of filenames without the .pth extension.
+    """
+    files = os.listdir(directory)
+    pth_files = [file[:-4] for file in files if file.endswith(".pth")]
+    return pth_files
+
+
 def set_random_seed(gpu_id: int = 0):
     # Combine the current time with the GPU ID to create a unique seed
     seed = int(time.time()) + gpu_id

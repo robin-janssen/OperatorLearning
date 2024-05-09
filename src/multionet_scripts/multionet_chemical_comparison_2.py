@@ -4,7 +4,7 @@
 # The third model is the result of a more extensive fine-tuning.
 
 import numpy as np
-from data.osu_chemicals import chemicals
+from data.osu_chemicals import osu_chemicals
 from plotting import (
     plot_chemical_examples,
     plot_chemicals_comparative,

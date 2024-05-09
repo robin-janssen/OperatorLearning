@@ -4,7 +4,7 @@ import numpy as np
 
 # from torchinfo import summary
 
-from data.osu_chemicals import chemicals
+from data.osu_chemicals import osu_chemicals
 from data import create_dataloader_chemicals, load_chemical_data
 from plotting import (
     plot_chemical_examples,
@@ -44,7 +44,7 @@ def run(args):
     massloss_factor = 0.013
 
     if USE_MASS_CONSERVATION:
-        from data.osu_chemicals import masses
+        from data.osu_chemicals import osu_masses
     else:
         masses = None
 
