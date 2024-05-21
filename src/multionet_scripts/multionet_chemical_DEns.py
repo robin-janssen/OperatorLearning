@@ -10,8 +10,8 @@ from plotting import (
     plot_losses,
     visualise_deep_ensemble,
 )
-from data import create_dataloader_chemicals, load_chemical_data
-from data.osu_chemicals import osu_chemicals
+from data import create_dataloader_chemicals  # , load_chemical_data
+from data.osu_chemicals import osu_chemicals as chemicals
 
 
 def load_model_and_losses(directory, device="cpu"):
@@ -31,15 +31,15 @@ def load_model_and_losses(directory, device="cpu"):
         configs.append(config)
 
         # Initialize the model based on the configuration
-        model_path = os.path.join(directory, base_name + ".pth")
-        model, _, _ = load_multionet(config, device, model_path)
+        model_path = os.path.join(directory, base_name)
+        model, train_loss, test_loss = load_multionet(config, device, model_path)
         models.append(model)
 
         # Load losses
-        losses_path = os.path.join(directory, base_name + "_losses.npz")
-        losses_data = np.load(losses_path)
-        train_loss = losses_data["train_loss"]
-        test_loss = losses_data["test_loss"]
+        # losses_path = os.path.join(directory, base_name + "_losses.npz")
+        # losses_data = np.load(losses_path)
+        # train_loss = losses_data["train_loss"]
+        # test_loss = losses_data["test_loss"]
         losses.append({"train_loss": train_loss, "test_loss": test_loss})
 
     return models, configs, losses
@@ -55,13 +55,11 @@ def deep_ensemble_uq(models, configs, dataloader):
         total_loss, preds, targets = test_deeponet(
             model, dataloader, N_timesteps=config["N_timesteps"], device="cpu"
         )
-        # preds = preds.transpose(0, 2, 1)
-        # targets = targets.transpose(0, 2, 1)
         print(f"Average prediction error (DeepONet {idx}): {total_loss:.3E}")
         N_outputs = config["N_outputs"]
         N_timesteps = config["N_timesteps"]
-        preds = preds.reshape(-1, N_outputs, N_timesteps)
-        targets = targets.reshape(-1, N_outputs, N_timesteps)
+        preds = preds.reshape(-1, N_timesteps, N_outputs)
+        targets = targets.reshape(-1, N_timesteps, N_outputs)
         errors = np.abs(preds - targets)
         relative_errors = errors / np.abs(targets)
 
@@ -87,14 +85,15 @@ def deep_ensemble_losses(losses):
 
 
 def run(args):
-    directory = "models/03-29/"
-    directory = os.path.join(os.getcwd(), directory)
-    models, configs, losses = load_model_and_losses(directory, args.device)
+    model_dir = "models/03-29/"
+    model_dir = os.path.join(os.getcwd(), model_dir)
+    models, configs, losses = load_model_and_losses(model_dir, args.device)
 
-    data = load_chemical_data(args.data_path)
-    data = data[:, :, :29]
-    test_data = data[500:550]
-    timesteps = np.arange(data.shape[1])
+    # data = load_chemical_data(args.data_path)
+    test_data = np.load("data/osu_data/test_data.npy")
+    # data = data[:, :, :29]
+    # test_data = data[500:550]
+    timesteps = np.arange(test_data.shape[1])
 
     dataloader_test = create_dataloader_chemicals(
         test_data, timesteps, fraction=1, batch_size=32, shuffle=False
@@ -118,6 +117,7 @@ def run(args):
         targets,
         num_chemicals=7,
         chemical_names=extracted_chemicals,
+        save=True,
     )
 
     print("Done!")

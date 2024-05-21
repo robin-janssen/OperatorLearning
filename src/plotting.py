@@ -1160,7 +1160,11 @@ def plot_mass_conservation(ground_truth, masses, num_examples=5):
 
 
 def visualise_deep_ensemble(
-    predictions_list, ground_truth, num_chemicals, chemical_names
+    predictions_list: list[np.ndarray],
+    ground_truth: np.ndarray,
+    num_chemicals: int,
+    chemical_names: list[str],
+    save: bool = False,
 ):
     """
     Visualize the predictions of a deep ensemble and the ground truth.
@@ -1169,18 +1173,15 @@ def visualise_deep_ensemble(
     :param ground_truth: Array of shape [N_datapoints, N_timesteps, N_chemicals]
     :param num_chemicals: Number of chemicals to plot
     :param chemical_names: List of chemical names
+    :param save: Whether to save the plot as an image file
     """
     # Ensure num_chemicals does not exceed the size of the third dimension
     num_chemicals = min(num_chemicals, ground_truth.shape[2])
 
     # Calculate mean and standard deviation of predictions
     predictions_stack = np.stack(predictions_list, axis=0)
-
-    predictions_stack = predictions_stack.transpose(0, 1, 3, 2)
     prediction_mean = np.mean(predictions_stack, axis=0)
     prediction_std = np.std(predictions_stack, axis=0)
-
-    ground_truth = ground_truth.transpose(0, 2, 1)
 
     # Generate colors
     colors = plt.cm.viridis(np.linspace(0, 1, num_chemicals))
@@ -1222,6 +1223,14 @@ def visualise_deep_ensemble(
 
     plt.legend()
     plt.tight_layout()
+
+    if save:
+        filename = "deep_ensemble_predictions.png"
+        directory = create_date_based_directory(subfolder="plots")
+        filepath = save_plot_counter(filename, directory)
+        plt.savefig(filepath)
+        print(f"Plot saved as: {filepath}")
+
     plt.show()
 
 

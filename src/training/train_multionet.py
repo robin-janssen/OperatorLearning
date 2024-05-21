@@ -1045,8 +1045,7 @@ def load_multionet(
             - 'architecture' (str): Architecture type, e.g., 'both', 'branch', or 'trunk'.
             - 'device' (str): The device to use for the model, e.g., 'cpu', 'cuda:0'.
         device (str): The device to use for the model.
-        model_path (str): Path to the saved state dictionary. As seen from the parent directory of src. Should not have a file extension.
-
+        model_path (str): Path to the saved state dictionary. As seen from the parent directory of src.
     Returns:
         deeponet: Loaded DeepONet model.
     """
@@ -1082,6 +1081,9 @@ def load_multionet(
         if model_path is None:
             model_path = conf["pretrained_model_path"]
         absolute_path = get_project_path(model_path)
+        # Remove the .pth extension if it is present
+        if absolute_path.endswith(".pth"):
+            absolute_path = absolute_path[:-4]
         state_dict = torch.load(absolute_path + ".pth", map_location=device)
         deeponet.load_state_dict(state_dict)
         prev_losses = np.load(absolute_path + "_losses.npz")
